@@ -435,7 +435,6 @@ function ensureReloadButton(node, reloadFn) {
 	const widget = node.addWidget("button", "Reload File", () => reloadFn(), null, {
 		serialize: false,
 	});
-	widget.name = "reload_script_button";
 	widget.description = "Reloads script preview from disk.";
 	toggleWidgetVisibility(widget, false);
 	node[RELOAD_WIDGET_SYMBOL] = widget;
