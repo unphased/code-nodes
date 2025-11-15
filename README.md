@@ -18,8 +18,26 @@ custom_nodes/
 requirements.txt         # empty placeholder (no deps)
 ```
 
+## Installation
+
 Clone this repository directly into `ComfyUI/custom_nodes` or install it via
-ComfyUI Manager once published.
+ComfyUI Manager once published. During installation ComfyUI automatically
+executes `pip install -r requirements.txt` for each custom node, so declaring
+dependencies in that file is all that is required for normal setups.
+
+### Testing inside Docker
+
+If you run ComfyUI inside a Docker container you can manually trigger the same
+dependency install step with:
+
+```bash
+docker exec -it <comfy_container_name> bash -lc \
+  "cd /opt/ComfyUI/custom_nodes/code-nodes && pip install -r requirements.txt"
+```
+
+Replace `/opt/ComfyUI` with the root of your ComfyUI checkout if it differs.
+Running that command ensures the requirements resolve exactly the way ComfyUI
+Manager would during a fresh install.
 
 ## Node overview
 
