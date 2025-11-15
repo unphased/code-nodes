@@ -414,7 +414,11 @@ function hookMenu(node, refreshFn, reloadFn) {
 			target.push({
 				content: "Reload Script Preview",
 				callback: () => reloadFn(),
-	});
+			});
+		}
+		return r;
+	};
+	node[MENU_SYMBOL] = true;
 }
 
 function ensureReloadButton(node, reloadFn) {
@@ -429,10 +433,6 @@ function ensureReloadButton(node, reloadFn) {
 	toggleWidgetVisibility(widget, false);
 	node[RELOAD_WIDGET_SYMBOL] = widget;
 	return widget;
-}
-		return r;
-	};
-	node[MENU_SYMBOL] = true;
 }
 
 function applyPlaceholderEnhancements(node) {
