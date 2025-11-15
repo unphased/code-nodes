@@ -92,8 +92,9 @@ class PythonCodeNode:
             if not isinstance(result_lines, list):
                 result_lines = []
 
-        if strip_empty and result_lines:
-            result_lines = [line for line in result_lines if str(line).strip()]
+        result_lines = [str(line) for line in result_lines]
+        if strip_empty:
+            result_lines = [line for line in result_lines if line.strip()]
 
         return result_text, result_lines, stdout, stderr, ok
 
