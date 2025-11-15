@@ -248,6 +248,10 @@ function toggleWidgetVisibility(widget, shouldShow) {
 
 	widget.options ||= {};
 	if (!widget.__codeHeightFns) {
+		if (!widget.__codeOptionsCloned) {
+			widget.options = { ...widget.options };
+			widget.__codeOptionsCloned = true;
+		}
 		widget.__codeHeightFns = {
 			min: widget.options.getMinHeight,
 			max: widget.options.getMaxHeight,
