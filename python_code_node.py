@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import difflib
 import io
 import traceback
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+try:  # pragma: no cover - ComfyUI runtime provides these modules
+    from aiohttp import web
+    from server import PromptServer
+except Exception:  # pragma: no cover - tests may run without ComfyUI
+    web = None
+    PromptServer = None
 
 
 class PythonCodeNode:
@@ -232,3 +240,84 @@ class PythonCodeNode:
             result_lines = [line for line in result_lines if line.strip()]
 
         return result_text, result_lines, stdout, stderr, ok
+
+
+def _resolve_script_destination(filename: str) -> Path:
+    sanitized = (filename or "").strip()
+    if not sanitized:
+        raise ValueError("script filename is required")
+    candidate = Path(sanitized)
+    if not candidate.is_absolute():
+        candidate = (PythonCodeNode.EXTENSION_ROOT / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    try:
+        candidate.relative_to(PythonCodeNode.EXTENSION_ROOT)
+    except ValueError as exc:
+        raise ValueError("script_filename must remain inside the code-nodes directory") from exc
+    return candidate
+
+
+def _json_reply(ok: bool, message: str = "", status: int = 200, **extra):
+    payload: Dict[str, Any] = {"ok": ok, "message": message}
+    payload.update(extra)
+    return web.json_response(payload, status=status)
+
+
+def register_routes() -> None:
+    if not (web and PromptServer and getattr(PromptServer, "instance", None)):
+        return
+    server = PromptServer.instance
+    if getattr(server, "_code_nodes_routes", False):  # type: ignore[attr-defined]
+        return
+
+    @server.routes.post("/code-nodes/script")
+    async def save_script(request):
+        try:
+            data = await request.json()
+        except Exception:
+            return _json_reply(False, "Invalid JSON payload", status=400)
+
+        path_value = data.get("path", "")
+        contents = data.get("contents", "")
+        force = bool(data.get("force"))
+        try:
+            destination = _resolve_script_destination(path_value)
+        except ValueError as exc:
+            return _json_reply(False, str(exc), status=400)
+
+        if not isinstance(contents, str):
+            return _json_reply(False, "contents must be a string", status=400)
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        exists = destination.exists()
+        text_before = ""
+        if exists:
+            text_before = destination.read_text(encoding="utf-8")
+            if text_before == contents:
+                return _json_reply(True, "File already up to date.", path=str(destination))
+            if not force:
+                diff_lines = difflib.unified_diff(
+                    text_before.splitlines(),
+                    contents.splitlines(),
+                    fromfile=str(destination),
+                    tofile="pending changes",
+                    lineterm="",
+                )
+                diff_text = "\n".join(diff_lines).strip()
+                if not diff_text:
+                    diff_text = "(no textual diff available)"
+                return _json_reply(
+                    False,
+                    "File exists and differs.",
+                    requires_confirmation=True,
+                    diff=diff_text,
+                )
+
+        destination.write_text(contents, encoding="utf-8")
+        return _json_reply(True, "Script saved.", path=str(destination))
+
+    server._code_nodes_routes = True  # type: ignore[attr-defined]
+
+
+register_routes()

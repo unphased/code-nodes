@@ -12,6 +12,7 @@ const LOAD_TOGGLE_SYMBOL = Symbol("codeNodesFileToggleWatcher");
 const FILE_WIDGET_SYMBOL = Symbol("codeNodesFileWidgetWatcher");
 const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
 const RELOAD_WIDGET_SYMBOL = Symbol("codeNodesReloadButton");
+const SAVE_WIDGET_SYMBOL = Symbol("codeNodesSaveButton");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
 const LOAD_WIDGET_NAME = "load_from_file";
@@ -26,6 +27,7 @@ const EXTENSION_BASE_URL = (() => {
 	}
 })();
 const STYLE_ELEMENT_ID = "code-nodes-script-style";
+const SAVE_ENDPOINT = "/code-nodes/script";
 
 function ensureStyles() {
 	if (document.getElementById(STYLE_ELEMENT_ID)) {
@@ -37,11 +39,57 @@ function ensureStyles() {
 .code-nodes-script-readonly {
 	background-color: var(--comfy-input-bg-disabled, rgba(0, 0, 0, 0.05));
 }
+.code-nodes-action-button {
+	display: inline-flex !important;
+	width: calc(50% - 6px) !important;
+	margin: 2px 6px 2px 0 !important;
+	padding: 0 !important;
+}
+.code-nodes-action-button.code-nodes-action-button--right {
+	margin-right: 0 !important;
+}
 `.trim();
 	document.head.appendChild(style);
 }
 
 ensureStyles();
+
+function styleButtonElement(widget, className) {
+	if (!widget) {
+		return;
+	}
+	let attempts = 0;
+	const apply = () => {
+		const el = widget.element;
+		if (!el && attempts < 5) {
+			attempts += 1;
+			requestAnimationFrame(apply);
+			return;
+		}
+		if (el) {
+			el.classList.add("code-nodes-action-button");
+			if (className) {
+				el.classList.add(className);
+			}
+		}
+	};
+	apply();
+}
+
+async function postJSON(url, body) {
+	const response = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(body),
+	});
+	if (!response.ok) {
+		const text = await response.text().catch(() => "");
+		throw new Error(text || `HTTP ${response.status}`);
+	}
+	return response.json();
+}
 
 function findWidget(node, name) {
 	if (!node?.widgets) {
@@ -76,6 +124,10 @@ function getScriptWidget(node) {
 
 function getReloadWidget(node) {
 	return node[RELOAD_WIDGET_SYMBOL];
+}
+
+function getSaveWidget(node) {
+	return node[SAVE_WIDGET_SYMBOL];
 }
 
 function clampInputCount(value) {
@@ -156,6 +208,47 @@ function updatePythonPlaceholders(node) {
 	});
 }
 
+async function saveScriptToFile(node, { force = false } = {}) {
+	const scriptWidget = getScriptWidget(node);
+	const filenameWidget = getFileWidget(node);
+	if (!scriptWidget) {
+		return;
+	}
+	const filename = normalizeFilename(filenameWidget?.value || "");
+	if (!filename) {
+		window.alert("Enter a script filename before saving.");
+		return;
+	}
+	const payload = {
+		path: filename,
+		contents: scriptWidget.value || "",
+		force,
+	};
+	let result;
+	try {
+		result = await postJSON(SAVE_ENDPOINT, payload);
+	} catch (error) {
+		console.warn("[code nodes] Failed to save script", error);
+		window.alert(`Failed to save script:\n${error?.message || error}`);
+		return;
+	}
+	if (result?.requires_confirmation && !force) {
+		const diffText = result.diff || "(no diff available)";
+		const confirmMessage = `File already exists: ${filename}\n\n${diffText}\n\nOverwrite file?`;
+		if (window.confirm(confirmMessage)) {
+			await saveScriptToFile(node, { force: true });
+		}
+		return;
+	}
+	if (!result?.ok) {
+		const msg = result?.message || "Unknown error";
+		window.alert(`Failed to save script:\n${msg}`);
+		return;
+	}
+	const successMessage = result.message || `Saved ${filename}`;
+	console.info("[code nodes]", successMessage);
+}
+
 function setScriptReadOnly(scriptWidget, shouldReadOnly) {
 	if (!scriptWidget?.inputEl) {
 		return;
@@ -169,10 +262,11 @@ function updateScriptFileState(node, forceReload = false) {
 	const scriptWidget = getScriptWidget(node);
 	const filenameWidget = getFileWidget(node);
 	const reloadWidget = getReloadWidget(node);
+	const saveWidget = getSaveWidget(node);
 	const shouldLoad = getLoadFromFileValue(node);
 
-	toggleWidgetVisibility(filenameWidget, shouldLoad);
 	toggleWidgetVisibility(reloadWidget, shouldLoad);
+	toggleWidgetVisibility(saveWidget, shouldLoad);
 	setScriptReadOnly(scriptWidget, shouldLoad);
 
 	if (!shouldLoad || !scriptWidget) {
@@ -444,6 +538,21 @@ function ensureReloadButton(node, reloadFn) {
 	widget.description = "Reloads script preview from disk.";
 	toggleWidgetVisibility(widget, false);
 	node[RELOAD_WIDGET_SYMBOL] = widget;
+	styleButtonElement(widget, "");
+	return widget;
+}
+
+function ensureSaveButton(node, saveFn) {
+	if (node[SAVE_WIDGET_SYMBOL] || typeof node.addWidget !== "function") {
+		return node[SAVE_WIDGET_SYMBOL];
+	}
+	const widget = node.addWidget("button", "Save File", () => saveFn(), null, {
+		serialize: false,
+	});
+	widget.description = "Writes the current script to the chosen file.";
+	toggleWidgetVisibility(widget, false);
+	node[SAVE_WIDGET_SYMBOL] = widget;
+	styleButtonElement(widget, "code-nodes-action-button--right");
 	return widget;
 }
 
@@ -461,6 +570,7 @@ function applyPlaceholderEnhancements(node) {
 	const softRefresh = () => refresh();
 	const reloadScript = () => refresh({ reloadScript: true });
 	ensureReloadButton(node, reloadScript);
+	ensureSaveButton(node, () => saveScriptToFile(node));
 	hookSplitLinesToggle(node, softRefresh);
 	hookInputCountWidget(node, softRefresh);
 	hookLoadFromFileWidget(node, reloadScript);

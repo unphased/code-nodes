@@ -100,13 +100,17 @@ Toggle **Load code from file** when you want to keep the main script in a real
 editor on disk. When the toggle is enabled:
 
 - The script textbox becomes read-only so it mirrors whatever is on disk.
-- A new `script_filename` widget appears where you can enter a path relative to
-  the `code-nodes` extension directory (absolute paths are also supported).
+- The `script_filename` widget (always visible) lets you type a path relative to
+  the `code-nodes` extension directory. For safety, the built-in saver only
+  writes inside that directory.
 - The helper fetches the file over ComfyUI's `/extensions/...` static server so
   the code preview inside the node keeps up with the file contents. Use the
   dedicated **Reload File** button (or the node's right-click menu →
   **Reload Script Preview**) after editing the file to pull in the latest
   version.
+- Need to push changes back to disk? Click **Save File** next to the reload
+  button. If the target file already exists you'll get a unified diff in a
+  confirmation dialog before the node overwrites it.
 - During execution the node reads the same file directly from the filesystem so
   you can keep iterating in your own editor without copy/paste loops.
 
