@@ -53,8 +53,11 @@ class ShellCodeNode:
         """Execute *script* with *stdin_text* and return stdout/lines/stderr/ok."""
 
         try:
+            bash_path = shutil.which("bash")
+            if not bash_path:
+                raise FileNotFoundError("bash executable not found in PATH")
             proc = subprocess.run(
-                ["/bin/bash", "-lc", script],
+                [bash_path, "-lc", script],
                 input=stdin_text,
                 capture_output=True,
                 text=True,
