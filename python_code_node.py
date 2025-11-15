@@ -17,18 +17,42 @@ class PythonCodeNode:
     RETURN_NAMES = ("result", "result_lines", "stdout", "stderr", "ok")
     OUTPUT_IS_LIST = (False, True, False, False, False)
     INPUT_IS_LIST = False
+    MAX_INPUT_SLOTS = 12
+    DEFAULT_INPUT_SLOTS = 5
 
     @classmethod
     def INPUT_TYPES(cls):
         def multiline_str(name: str):
-            placeholder = f"{name} (string/list via split_lines)"
-            if name == "input1":
-                placeholder += "; alias input_text/lines"
+            index = int(name.replace("input", ""))
+            alias = "inputs[0]" if index == 1 else f"inputs[{index - 1}]"
+            alias_hint = " (also input_text/lines)" if index == 1 else ""
+            placeholder = f"{name} ↔ {alias}{alias_hint}; string/list depends on split_lines"
             return {
                 "multiline": True,
                 "default": "",
                 "placeholder": placeholder,
             }
+
+        optional_inputs = {
+            "input_slots": (
+                "INT",
+                {
+                    "default": cls.DEFAULT_INPUT_SLOTS,
+                    "min": 1,
+                    "max": cls.MAX_INPUT_SLOTS,
+                    "step": 1,
+                    "display": "number",
+                },
+            )
+        }
+        for slot in range(2, cls.MAX_INPUT_SLOTS + 1):
+            optional_inputs[f"input{slot}"] = ("STRING", multiline_str(f"input{slot}"))
+        optional_inputs.update(
+            {
+                "split_lines": ("BOOLEAN", {"default": True}),
+                "strip_empty": ("BOOLEAN", {"default": True}),
+            }
+        )
 
         return {
             "required": {
@@ -37,19 +61,12 @@ class PythonCodeNode:
                     {
                         "multiline": True,
                         "default": "result = input1",
-                        "placeholder": "Python code; set result/result_lines (split_lines toggles string vs list inputs)",
+                        "placeholder": "Set result/result_lines; access raw data via inputs[*] (configure Input Count & split_lines below).",
                     },
                 ),
                 "input1": ("STRING", multiline_str("input1")),
             },
-            "optional": {
-                "input2": ("STRING", multiline_str("input2")),
-                "input3": ("STRING", multiline_str("input3")),
-                "input4": ("STRING", multiline_str("input4")),
-                "input5": ("STRING", multiline_str("input5")),
-                "split_lines": ("BOOLEAN", {"default": True}),
-                "strip_empty": ("BOOLEAN", {"default": True}),
-            },
+            "optional": optional_inputs,
         }
 
     def run(
@@ -60,6 +77,14 @@ class PythonCodeNode:
         input3: str = "",
         input4: str = "",
         input5: str = "",
+        input6: str = "",
+        input7: str = "",
+        input8: str = "",
+        input9: str = "",
+        input10: str = "",
+        input11: str = "",
+        input12: str = "",
+        input_slots: int = DEFAULT_INPUT_SLOTS,
         split_lines: bool = True,
         strip_empty: bool = True,
     ) -> Tuple[str, List[str], str, str, bool]:
@@ -70,19 +95,44 @@ class PythonCodeNode:
         ok = True
         result_text = ""
         result_lines: List[str]
-        inputs = [input1, input2, input3, input4, input5]
-        normalized_inputs: List[str] = [str(value or "") for value in inputs]
+        raw_inputs = [
+            input1,
+            input2,
+            input3,
+            input4,
+            input5,
+            input6,
+            input7,
+            input8,
+            input9,
+            input10,
+            input11,
+            input12,
+        ]
+        normalized_inputs: List[str] = [str(value or "") for value in raw_inputs[: self.MAX_INPUT_SLOTS]]
+        input_line_sets: List[List[str]] = [text.splitlines() for text in normalized_inputs]
+        try:
+            requested_slots = int(input_slots)
+        except (TypeError, ValueError):
+            requested_slots = self.DEFAULT_INPUT_SLOTS
+        active_inputs = max(1, min(self.MAX_INPUT_SLOTS, requested_slots))
         primary_input = normalized_inputs[0]
-        primary_lines = primary_input.splitlines()
+        primary_lines = input_line_sets[0]
+        inputs_payload = input_line_sets[:active_inputs] if split_lines else normalized_inputs[:active_inputs]
         local_ns: Dict[str, Any] = {
             "input_text": primary_input,
             "lines": primary_lines,
-            "result": primary_input,
-            "result_lines": primary_lines,
+            "result": "",
+            "result_lines": [],
+            "inputs": inputs_payload,
+            "inputs_text": normalized_inputs[:active_inputs],
+            "inputs_lines": input_line_sets[:active_inputs],
+            "active_inputs": active_inputs,
+            "input_slots": active_inputs,
         }
 
         for index, text_value in enumerate(normalized_inputs, start=1):
-            lines = text_value.splitlines()
+            lines = input_line_sets[index - 1]
             local_ns[f"input{index}_text"] = text_value
             local_ns[f"input{index}_lines"] = lines
             local_ns[f"input{index}"] = lines if split_lines else text_value
@@ -90,11 +140,17 @@ class PythonCodeNode:
         try:
             with redirect_stdout(stdout_buffer):
                 exec(script, {}, local_ns)
-            result_value = local_ns.get("result", "")
+            result_value = local_ns.get("result", None)
+            if result_value is None and "result_text" in local_ns:
+                result_value = local_ns.get("result_text")
             result_text = "" if result_value is None else str(result_value)
-            result_lines = local_ns.get("result_lines", [])
-            if not isinstance(result_lines, list):
-                result_lines = list(result_lines)
+            result_lines_value = local_ns.get("result_lines", None)
+            if result_lines_value is None:
+                result_lines = []
+            elif isinstance(result_lines_value, list):
+                result_lines = result_lines_value
+            else:
+                result_lines = list(result_lines_value)
         except Exception:  # pragma: no cover - safety against runtime errors
             ok = False
             result_text = ""

@@ -59,6 +59,7 @@ LIST output to allow wiring into other nodes.
 | ------------ | ------- | ------------------------------------------------------ |
 | `script`     | STRING  | Python code executed with `input_text` in scope.       |
 | `input_text` | STRING  | Text value available to the script.                    |
+| `input_slots`| INT     | Optional (default `5`, max `12`). Controls how many `input*` widgets are visible. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
 
@@ -71,7 +72,24 @@ Outputs `(result, result_lines, stdout, stderr, ok)` where:
 - `stderr` contains the formatted traceback if an exception occurs.
 - `ok` is `True` when the script executes without raising.
 
+Inside the Python script you always get:
+
+- `input1` … `input12` (up to the configured slot count): each is either a `list[str]` (when `split_lines=True`)
+  or a raw string when line splitting is disabled. Every input also exposes
+  `_text` and `_lines` variants (e.g., `input3_text`, `input3_lines`) so you
+  can work with whichever format you prefer regardless of the checkbox state.
+- `inputs`: ordered collection of all *active* inputs (count comes from the
+  `Input Slots` control). `inputs[n]` mirrors `input{n+1}` and respects
+  `split_lines`, while `inputs_text`/`inputs_lines` provide string-or-list
+  versions regardless of the toggle.
+- `input_text`/`lines`: convenient aliases for `input1_text` and
+  `input1_lines`.
+- `result`/`result_lines`: start empty; assign to them when you want to emit
+  values. If you only populate `result`, the node will automatically split it
+  into `result_lines` (respecting the `split_lines`/`strip_empty` settings).
+  Manually assigned `result_lines` are returned exactly as provided (after
+  optional whitespace stripping) and are never truncated.
+
 Both nodes are intentionally minimal wrappers over standard interpreters and do
 **not** provide sandboxing. Only run them on systems you control and never
 expose them to untrusted input.
-
