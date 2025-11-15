@@ -230,19 +230,22 @@ function hookMenu(node, refreshFn) {
 }
 
 function applyPlaceholderEnhancements(node) {
-	const refresh = () => {
+	const refresh = (options = {}) => {
 		ensureScriptSizing(node);
 		updatePythonPlaceholders(node);
 		updateInputVisibility(node);
-		recomputeNodeSize(node);
+		if (options.forceSize) {
+			recomputeNodeSize(node);
+		}
 	};
 
-	hookSplitLinesToggle(node, refresh);
-	hookInputCountWidget(node, refresh);
-	hookConfigure(node, refresh);
-	hookResize(node, refresh);
-	hookMenu(node, refresh);
-	requestAnimationFrame(refresh);
+	const softRefresh = () => refresh();
+	hookSplitLinesToggle(node, softRefresh);
+	hookInputCountWidget(node, softRefresh);
+	hookConfigure(node, softRefresh);
+	hookResize(node, softRefresh);
+	hookMenu(node, () => refresh({ forceSize: true }));
+	requestAnimationFrame(() => refresh({ forceSize: true }));
 }
 
 app.registerExtension({
