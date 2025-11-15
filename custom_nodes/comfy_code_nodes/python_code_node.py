@@ -69,7 +69,7 @@ class PythonCodeNode:
         try:
             with redirect_stdout(stdout_buffer):
                 exec(script, {}, local_ns)
-            result_value = local_ns.get("result", local_ns.get("result_text", ""))
+            result_value = local_ns.get("result", "")
             result_text = "" if result_value is None else str(result_value)
             result_lines = local_ns.get("result_lines", [])
             if not isinstance(result_lines, list):
