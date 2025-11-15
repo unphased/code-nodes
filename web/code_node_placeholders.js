@@ -111,7 +111,10 @@ function describeInputPlaceholder(name, index, splitEnabled, activeCount) {
 }
 
 function normalizeFilename(value) {
-	return (value || "").trim().replace(/^\/+/, "");
+	if (typeof value !== "string") {
+		return "";
+	}
+	return value.trim().replace(/^\/+/, "");
 }
 
 function buildScriptURL(filename) {
