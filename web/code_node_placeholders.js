@@ -11,6 +11,7 @@ const MENU_SYMBOL = Symbol("codeNodesMenuHook");
 const LOAD_TOGGLE_SYMBOL = Symbol("codeNodesFileToggleWatcher");
 const FILE_WIDGET_SYMBOL = Symbol("codeNodesFileWidgetWatcher");
 const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
+const RELOAD_WIDGET_SYMBOL = Symbol("codeNodesReloadButton");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
 const LOAD_WIDGET_NAME = "load_from_file";
@@ -71,6 +72,10 @@ function getFileWidget(node) {
 
 function getScriptWidget(node) {
 	return findWidget(node, SCRIPT_WIDGET_NAME);
+}
+
+function getReloadWidget(node) {
+	return node[RELOAD_WIDGET_SYMBOL];
 }
 
 function clampInputCount(value) {
@@ -160,9 +165,11 @@ function setScriptReadOnly(scriptWidget, shouldReadOnly) {
 function updateScriptFileState(node, forceReload = false) {
 	const scriptWidget = getScriptWidget(node);
 	const filenameWidget = getFileWidget(node);
+	const reloadWidget = getReloadWidget(node);
 	const shouldLoad = getLoadFromFileValue(node);
 
 	toggleWidgetVisibility(filenameWidget, shouldLoad);
+	toggleWidgetVisibility(reloadWidget, shouldLoad);
 	setScriptReadOnly(scriptWidget, shouldLoad);
 
 	if (!shouldLoad || !scriptWidget) {
@@ -237,6 +244,7 @@ function toggleWidgetVisibility(widget, shouldShow) {
 		element.hidden = !shouldShow;
 		element.style.display = shouldShow ? "" : "none";
 	}
+	widget.hidden = !shouldShow;
 
 	widget.options ||= {};
 	if (!widget.__codeHeightFns) {
@@ -406,8 +414,22 @@ function hookMenu(node, refreshFn, reloadFn) {
 			target.push({
 				content: "Reload Script Preview",
 				callback: () => reloadFn(),
-			});
-		}
+	});
+}
+
+function ensureReloadButton(node, reloadFn) {
+	if (node[RELOAD_WIDGET_SYMBOL] || typeof node.addWidget !== "function") {
+		return node[RELOAD_WIDGET_SYMBOL];
+	}
+	const widget = node.addWidget("button", "Reload File", () => reloadFn(), null, {
+		serialize: false,
+	});
+	widget.name = "reload_script_button";
+	widget.description = "Reloads script preview from disk.";
+	toggleWidgetVisibility(widget, false);
+	node[RELOAD_WIDGET_SYMBOL] = widget;
+	return widget;
+}
 		return r;
 	};
 	node[MENU_SYMBOL] = true;
@@ -426,6 +448,7 @@ function applyPlaceholderEnhancements(node) {
 
 	const softRefresh = () => refresh();
 	const reloadScript = () => refresh({ reloadScript: true });
+	ensureReloadButton(node, reloadScript);
 	hookSplitLinesToggle(node, softRefresh);
 	hookInputCountWidget(node, softRefresh);
 	hookLoadFromFileWidget(node, reloadScript);

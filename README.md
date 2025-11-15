@@ -104,8 +104,9 @@ editor on disk. When the toggle is enabled:
   the `code-nodes` extension directory (absolute paths are also supported).
 - The helper fetches the file over ComfyUI's `/extensions/...` static server so
   the code preview inside the node keeps up with the file contents. Use the
-  node's right-click menu → **Reload Script Preview** after editing the file to
-  pull in the latest version.
+  dedicated **Reload File** button (or the node's right-click menu →
+  **Reload Script Preview**) after editing the file to pull in the latest
+  version.
 - During execution the node reads the same file directly from the filesystem so
   you can keep iterating in your own editor without copy/paste loops.
 
