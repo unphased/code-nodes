@@ -17,8 +17,8 @@ class PythonCodeNode:
     RETURN_NAMES = ("result", "result_lines", "stdout", "stderr", "ok")
     OUTPUT_IS_LIST = (False, True, False, False, False)
     INPUT_IS_LIST = False
-    MAX_INPUT_SLOTS = 12
-    DEFAULT_INPUT_SLOTS = 5
+    MAX_INPUT_SLOTS = 20
+    DEFAULT_INPUT_SLOTS = 1
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -84,6 +84,14 @@ class PythonCodeNode:
         input10: str = "",
         input11: str = "",
         input12: str = "",
+        input13: str = "",
+        input14: str = "",
+        input15: str = "",
+        input16: str = "",
+        input17: str = "",
+        input18: str = "",
+        input19: str = "",
+        input20: str = "",
         input_slots: int = DEFAULT_INPUT_SLOTS,
         split_lines: bool = True,
         strip_empty: bool = True,
@@ -108,6 +116,14 @@ class PythonCodeNode:
             input10,
             input11,
             input12,
+            input13,
+            input14,
+            input15,
+            input16,
+            input17,
+            input18,
+            input19,
+            input20,
         ]
         normalized_inputs: List[str] = [str(value or "") for value in raw_inputs[: self.MAX_INPUT_SLOTS]]
         input_line_sets: List[List[str]] = [text.splitlines() for text in normalized_inputs]
@@ -138,8 +154,9 @@ class PythonCodeNode:
             local_ns[f"input{index}"] = lines if split_lines else text_value
 
         try:
+            local_ns.setdefault("__builtins__", __builtins__)
             with redirect_stdout(stdout_buffer):
-                exec(script, {}, local_ns)
+                exec(script, local_ns, local_ns)
             result_value = local_ns.get("result", None)
             if result_value is None and "result_text" in local_ns:
                 result_value = local_ns.get("result_text")

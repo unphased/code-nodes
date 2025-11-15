@@ -59,7 +59,7 @@ LIST output to allow wiring into other nodes.
 | ------------ | ------- | ------------------------------------------------------ |
 | `script`     | STRING  | Python code executed with `input_text` in scope.       |
 | `input_text` | STRING  | Text value available to the script.                    |
-| `input_slots`| INT     | Optional (default `5`, max `12`). Controls how many `input*` widgets are visible. |
+| `input_slots`| INT     | Optional (default `1`, max `20`). Controls how many `input*` widgets are visible. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
 
@@ -74,7 +74,7 @@ Outputs `(result, result_lines, stdout, stderr, ok)` where:
 
 Inside the Python script you always get:
 
-- `input1` … `input12` (up to the configured slot count): each is either a `list[str]` (when `split_lines=True`)
+- `input1` … `input20` (up to the configured slot count): each is either a `list[str]` (when `split_lines=True`)
   or a raw string when line splitting is disabled. Every input also exposes
   `_text` and `_lines` variants (e.g., `input3_text`, `input3_lines`) so you
   can work with whichever format you prefer regardless of the checkbox state.
