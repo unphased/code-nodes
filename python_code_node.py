@@ -20,11 +20,16 @@ class PythonCodeNode:
 
     @classmethod
     def INPUT_TYPES(cls):
-        multiline_str = {
-            "multiline": True,
-            "default": "",
-            "placeholder": "text exposed as input",
-        }
+        def multiline_str(name: str):
+            placeholder = f"{name} (string/list via split_lines)"
+            if name == "input1":
+                placeholder += "; alias input_text/lines"
+            return {
+                "multiline": True,
+                "default": "",
+                "placeholder": placeholder,
+            }
+
         return {
             "required": {
                 "script": (
@@ -32,16 +37,16 @@ class PythonCodeNode:
                     {
                         "multiline": True,
                         "default": "result = input1",
-                        "placeholder": "Python code; set `result` or `result_lines`",
+                        "placeholder": "Python code; set result/result_lines (split_lines toggles string vs list inputs)",
                     },
                 ),
-                "input1": ("STRING", multiline_str),
+                "input1": ("STRING", multiline_str("input1")),
             },
             "optional": {
-                "input2": ("STRING", multiline_str),
-                "input3": ("STRING", multiline_str),
-                "input4": ("STRING", multiline_str),
-                "input5": ("STRING", multiline_str),
+                "input2": ("STRING", multiline_str("input2")),
+                "input3": ("STRING", multiline_str("input3")),
+                "input4": ("STRING", multiline_str("input4")),
+                "input5": ("STRING", multiline_str("input5")),
                 "split_lines": ("BOOLEAN", {"default": True}),
                 "strip_empty": ("BOOLEAN", {"default": True}),
             },
@@ -110,4 +115,3 @@ class PythonCodeNode:
             result_lines = [line for line in result_lines if line.strip()]
 
         return result_text, result_lines, stdout, stderr, ok
-

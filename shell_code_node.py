@@ -26,7 +26,7 @@ class ShellCodeNode:
                     {
                         "multiline": True,
                         "default": "cat",
-                        "placeholder": "bash script to execute",
+                        "placeholder": "script",
                     },
                 ),
                 "stdin_text": (
@@ -34,7 +34,7 @@ class ShellCodeNode:
                     {
                         "multiline": True,
                         "default": "",
-                        "placeholder": "text piped to stdin",
+                        "placeholder": "stdin_text",
                     },
                 ),
             },
@@ -80,4 +80,3 @@ class ShellCodeNode:
             stdout_lines = []
 
         return stdout, stdout_lines, stderr, ok
-

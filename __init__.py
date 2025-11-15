@@ -13,10 +13,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PythonCodeNode": "Python Code",
 }
 
+WEB_DIRECTORY = "./web"
+
 __all__ = [
     "ShellCodeNode",
     "PythonCodeNode",
     "NODE_CLASS_MAPPINGS",
     "NODE_DISPLAY_NAME_MAPPINGS",
+    "WEB_DIRECTORY",
 ]
-
