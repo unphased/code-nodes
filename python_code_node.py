@@ -66,12 +66,7 @@ class PythonCodeNode:
         result_text = ""
         result_lines: List[str]
         inputs = [input1, input2, input3, input4, input5]
-        normalized_inputs: List[str] = []
-        for value in inputs:
-            if value is None:
-                normalized_inputs.append("")
-            else:
-                normalized_inputs.append(str(value))
+        normalized_inputs: List[str] = [str(value or "") for value in inputs]
         primary_input = normalized_inputs[0]
         primary_lines = primary_input.splitlines()
         local_ns: Dict[str, Any] = {
