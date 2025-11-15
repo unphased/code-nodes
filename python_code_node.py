@@ -20,26 +20,28 @@ class PythonCodeNode:
 
     @classmethod
     def INPUT_TYPES(cls):
+        multiline_str = {
+            "multiline": True,
+            "default": "",
+            "placeholder": "text exposed as input",
+        }
         return {
             "required": {
                 "script": (
                     "STRING",
                     {
                         "multiline": True,
-                        "default": "result = input_text",
+                        "default": "result = input1",
                         "placeholder": "Python code; set `result` or `result_lines`",
                     },
                 ),
-                "input_text": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "placeholder": "text exposed as input_text",
-                    },
-                ),
+                "input1": ("STRING", multiline_str),
             },
             "optional": {
+                "input2": ("STRING", multiline_str),
+                "input3": ("STRING", multiline_str),
+                "input4": ("STRING", multiline_str),
+                "input5": ("STRING", multiline_str),
                 "split_lines": ("BOOLEAN", {"default": True}),
                 "strip_empty": ("BOOLEAN", {"default": True}),
             },
@@ -48,7 +50,11 @@ class PythonCodeNode:
     def run(
         self,
         script: str,
-        input_text: str,
+        input1: str = "",
+        input2: str = "",
+        input3: str = "",
+        input4: str = "",
+        input5: str = "",
         split_lines: bool = True,
         strip_empty: bool = True,
     ) -> Tuple[str, List[str], str, str, bool]:
@@ -59,12 +65,27 @@ class PythonCodeNode:
         ok = True
         result_text = ""
         result_lines: List[str]
+        inputs = [input1, input2, input3, input4, input5]
+        normalized_inputs: List[str] = []
+        for value in inputs:
+            if value is None:
+                normalized_inputs.append("")
+            else:
+                normalized_inputs.append(str(value))
+        primary_input = normalized_inputs[0]
+        primary_lines = primary_input.splitlines()
         local_ns: Dict[str, Any] = {
-            "input_text": input_text,
-            "lines": input_text.splitlines(),
-            "result": input_text,
-            "result_lines": input_text.splitlines(),
+            "input_text": primary_input,
+            "lines": primary_lines,
+            "result": primary_input,
+            "result_lines": primary_lines,
         }
+
+        for index, text_value in enumerate(normalized_inputs, start=1):
+            lines = text_value.splitlines()
+            local_ns[f"input{index}_text"] = text_value
+            local_ns[f"input{index}_lines"] = lines
+            local_ns[f"input{index}"] = lines if split_lines else text_value
 
         try:
             with redirect_stdout(stdout_buffer):
