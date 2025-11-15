@@ -88,9 +88,6 @@ class PythonCodeNode:
                 auto_lines = [line for line in auto_lines if line.strip()]
             if not result_lines:
                 result_lines = auto_lines
-        else:
-            if not isinstance(result_lines, list):
-                result_lines = []
 
         result_lines = [str(line) for line in result_lines]
         if strip_empty:
