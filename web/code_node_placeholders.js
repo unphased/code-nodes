@@ -227,7 +227,13 @@ function updateScriptFileState(node, forceReload = false) {
 			node[FILE_STATE_SYMBOL] = { token: requestToken, lastPath: filename };
 		})
 		.catch((error) => {
-			console.warn(`[code nodes] Failed to load script '${filename}'`, error);
+			const message = `Failed to load script '${filename}': ${error?.message || error}`;
+			console.warn("[code nodes]", message);
+			scriptWidget.value = message;
+			if (scriptWidget.inputEl) {
+				scriptWidget.inputEl.value = message;
+				scriptWidget.inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+			}
 		})
 		.finally(() => {
 			const el = scriptWidget.inputEl;
