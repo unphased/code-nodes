@@ -60,6 +60,8 @@ LIST output to allow wiring into other nodes.
 | `script`     | STRING  | Python code executed with `input_text` in scope.       |
 | `input_text` | STRING  | Text value available to the script.                    |
 | `input_slots`| INT     | Optional (default `1`, max `20`). Controls how many `input*` widgets are visible. |
+| `load_from_file` | BOOLEAN | Optional (default `False`). When enabled the script is loaded from disk and the inline editor becomes read-only. |
+| `script_filename` | STRING | Optional (hidden unless `load_from_file=True`). Relative path (inside this extension directory) to the script that should be executed. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
 
@@ -84,11 +86,28 @@ Inside the Python script you always get:
   versions regardless of the toggle.
 - `input_text`/`lines`: convenient aliases for `input1_text` and
   `input1_lines`.
+- `script_path`: absolute filesystem path of the file used when `load_from_file`
+  is enabled, otherwise an empty string.
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. If you only populate `result`, the node will automatically split it
   into `result_lines` (respecting the `split_lines`/`strip_empty` settings).
   Manually assigned `result_lines` are returned exactly as provided (after
   optional whitespace stripping) and are never truncated.
+
+#### Loading scripts from files
+
+Toggle **Load code from file** when you want to keep the main script in a real
+editor on disk. When the toggle is enabled:
+
+- The script textbox becomes read-only so it mirrors whatever is on disk.
+- A new `script_filename` widget appears where you can enter a path relative to
+  the `code-nodes` extension directory (absolute paths are also supported).
+- The helper fetches the file over ComfyUI's `/extensions/...` static server so
+  the code preview inside the node keeps up with the file contents. Use the
+  node's right-click menu → **Reload Script Preview** after editing the file to
+  pull in the latest version.
+- During execution the node reads the same file directly from the filesystem so
+  you can keep iterating in your own editor without copy/paste loops.
 
 Both nodes are intentionally minimal wrappers over standard interpreters and do
 **not** provide sandboxing. Only run them on systems you control and never

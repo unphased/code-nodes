@@ -8,8 +8,39 @@ const SPLIT_SYMBOL = Symbol("codeNodesSplitWatcher");
 const COUNT_SYMBOL = Symbol("codeNodesInputCount");
 const RESIZE_SYMBOL = Symbol("codeNodesResizeWatcher");
 const MENU_SYMBOL = Symbol("codeNodesMenuHook");
+const LOAD_TOGGLE_SYMBOL = Symbol("codeNodesFileToggleWatcher");
+const FILE_WIDGET_SYMBOL = Symbol("codeNodesFileWidgetWatcher");
+const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
+const LOAD_WIDGET_NAME = "load_from_file";
+const FILE_WIDGET_NAME = "script_filename";
+const SCRIPT_WIDGET_NAME = "script";
+const EXTENSION_BASE_URL = (() => {
+	try {
+		return new URL("../", import.meta.url);
+	} catch (err) {
+		console.warn("[code nodes] Unable to determine extension base URL", err);
+		return null;
+	}
+})();
+const STYLE_ELEMENT_ID = "code-nodes-script-style";
+
+function ensureStyles() {
+	if (document.getElementById(STYLE_ELEMENT_ID)) {
+		return;
+	}
+	const style = document.createElement("style");
+	style.id = STYLE_ELEMENT_ID;
+	style.textContent = `
+.code-nodes-script-readonly {
+	background-color: var(--comfy-input-bg-disabled, rgba(0, 0, 0, 0.05));
+}
+`.trim();
+	document.head.appendChild(style);
+}
+
+ensureStyles();
 
 function findWidget(node, name) {
 	if (!node?.widgets) {
@@ -24,6 +55,22 @@ function getSplitLinesValue(node) {
 		return true;
 	}
 	return !!splitWidget.value;
+}
+
+function getLoadFromFileValue(node) {
+	const widget = findWidget(node, LOAD_WIDGET_NAME);
+	if (!widget) {
+		return false;
+	}
+	return !!widget.value;
+}
+
+function getFileWidget(node) {
+	return findWidget(node, FILE_WIDGET_NAME);
+}
+
+function getScriptWidget(node) {
+	return findWidget(node, SCRIPT_WIDGET_NAME);
 }
 
 function clampInputCount(value) {
@@ -58,10 +105,34 @@ function describeInputPlaceholder(name, index, splitEnabled, activeCount) {
 	return `${name} → ${descriptor} via ${alias}${extra}; ${helperNote}`;
 }
 
+function normalizeFilename(value) {
+	return (value || "").trim().replace(/^\/+/, "");
+}
+
+function buildScriptURL(filename) {
+	if (!EXTENSION_BASE_URL) {
+		return null;
+	}
+	const normalized = normalizeFilename(filename);
+	if (!normalized) {
+		return null;
+	}
+	try {
+		const url = new URL(normalized, EXTENSION_BASE_URL);
+		if (!url.pathname.startsWith(EXTENSION_BASE_URL.pathname)) {
+			throw new Error("Resolved path escapes extension directory");
+		}
+		return url.toString();
+	} catch (err) {
+		console.warn("[code nodes] Unable to resolve script URL", err);
+		return null;
+	}
+}
+
 function updatePythonPlaceholders(node) {
 	const splitEnabled = getSplitLinesValue(node);
 	const activeInputs = getActiveInputCount(node);
-	const scriptWidget = findWidget(node, "script");
+	const scriptWidget = getScriptWidget(node);
 	if (scriptWidget?.inputEl) {
 			const message = splitEnabled
 				? "Set result/result_lines. Active inputs arrive as list[str]; use inputs[*] or input*_text for raw strings. Increase Input Count to expose up to 20 slots."
@@ -75,6 +146,85 @@ function updatePythonPlaceholders(node) {
 			widget.inputEl.placeholder = describeInputPlaceholder(name, index, splitEnabled, activeInputs);
 		}
 	});
+}
+
+function setScriptReadOnly(scriptWidget, shouldReadOnly) {
+	if (!scriptWidget?.inputEl) {
+		return;
+	}
+	scriptWidget.inputEl.readOnly = shouldReadOnly;
+	scriptWidget.inputEl.classList.toggle("code-nodes-script-readonly", shouldReadOnly);
+	scriptWidget.inputEl.style.opacity = shouldReadOnly ? "0.85" : "";
+}
+
+function updateScriptFileState(node, forceReload = false) {
+	const scriptWidget = getScriptWidget(node);
+	const filenameWidget = getFileWidget(node);
+	const shouldLoad = getLoadFromFileValue(node);
+
+	toggleWidgetVisibility(filenameWidget, shouldLoad);
+	setScriptReadOnly(scriptWidget, shouldLoad);
+
+	if (!shouldLoad || !scriptWidget) {
+		const state = node[FILE_STATE_SYMBOL];
+		if (state) {
+			const bump = Number.isFinite(state.token) ? state.token + 1 : 1;
+			node[FILE_STATE_SYMBOL] = { token: bump, lastPath: state.lastPath ?? null };
+		}
+		return;
+	}
+
+	const filename = normalizeFilename(filenameWidget?.value || "");
+	if (!filename) {
+		return;
+	}
+
+	const url = buildScriptURL(filename);
+	if (!url) {
+		return;
+	}
+
+	const state = node[FILE_STATE_SYMBOL] || { token: 0, lastPath: null };
+	if (!forceReload && state.lastPath === filename && scriptWidget.value) {
+		return;
+	}
+
+	const requestToken = state.token + 1;
+	node[FILE_STATE_SYMBOL] = { token: requestToken, lastPath: state.lastPath };
+	const loadingEl = scriptWidget.inputEl;
+	if (loadingEl) {
+		loadingEl.dataset.loadingScript = "true";
+	}
+
+	fetch(url, { cache: "no-cache" })
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+			return response.text();
+		})
+		.then((text) => {
+			const currentState = node[FILE_STATE_SYMBOL];
+			if (!currentState || currentState.token !== requestToken) {
+				return;
+			}
+			scriptWidget.value = text;
+			if (scriptWidget.inputEl) {
+				scriptWidget.inputEl.value = text;
+				scriptWidget.inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+				scriptWidget.inputEl.scrollTop = 0;
+			}
+			node[FILE_STATE_SYMBOL] = { token: requestToken, lastPath: filename };
+		})
+		.catch((error) => {
+			console.warn(`[code nodes] Failed to load script '${filename}'`, error);
+		})
+		.finally(() => {
+			const el = scriptWidget.inputEl;
+			if (el) {
+				delete el.dataset.loadingScript;
+			}
+		});
 }
 
 function toggleWidgetVisibility(widget, shouldShow) {
@@ -182,6 +332,34 @@ function hookInputCountWidget(node, updateFn) {
 	countWidget[COUNT_SYMBOL] = true;
 }
 
+function hookLoadFromFileWidget(node, updateFn) {
+	const widget = findWidget(node, LOAD_WIDGET_NAME);
+	if (!widget || widget[LOAD_TOGGLE_SYMBOL]) {
+		return;
+	}
+	const originalCallback = widget.callback;
+	widget.callback = function (...args) {
+		const result = originalCallback?.apply(this, args);
+		updateFn();
+		return result;
+	};
+	widget[LOAD_TOGGLE_SYMBOL] = true;
+}
+
+function hookFilenameWidget(node, updateFn) {
+	const widget = getFileWidget(node);
+	if (!widget || widget[FILE_WIDGET_SYMBOL]) {
+		return;
+	}
+	const originalCallback = widget.callback;
+	widget.callback = function (...args) {
+		const result = originalCallback?.apply(this, args);
+		updateFn();
+		return result;
+	};
+	widget[FILE_WIDGET_SYMBOL] = true;
+}
+
 function hookResize(node, updateFn) {
 	if (node[RESIZE_SYMBOL]) {
 		return;
@@ -210,7 +388,7 @@ function hookConfigure(node, updateFn) {
 	node[CONFIG_SYMBOL] = true;
 }
 
-function hookMenu(node, refreshFn) {
+function hookMenu(node, refreshFn, reloadFn) {
 	if (node[MENU_SYMBOL]) {
 		return;
 	}
@@ -224,6 +402,12 @@ function hookMenu(node, refreshFn) {
 				refreshFn();
 			},
 		});
+		if (getLoadFromFileValue(node)) {
+			target.push({
+				content: "Reload Script Preview",
+				callback: () => reloadFn(),
+			});
+		}
 		return r;
 	};
 	node[MENU_SYMBOL] = true;
@@ -234,18 +418,22 @@ function applyPlaceholderEnhancements(node) {
 		ensureScriptSizing(node);
 		updatePythonPlaceholders(node);
 		updateInputVisibility(node);
+		updateScriptFileState(node, options.reloadScript);
 		if (options.forceSize) {
 			recomputeNodeSize(node);
 		}
 	};
 
 	const softRefresh = () => refresh();
+	const reloadScript = () => refresh({ reloadScript: true });
 	hookSplitLinesToggle(node, softRefresh);
 	hookInputCountWidget(node, softRefresh);
+	hookLoadFromFileWidget(node, reloadScript);
+	hookFilenameWidget(node, reloadScript);
 	hookConfigure(node, softRefresh);
 	hookResize(node, softRefresh);
-	hookMenu(node, () => refresh({ forceSize: true }));
-	requestAnimationFrame(() => refresh({ forceSize: true }));
+	hookMenu(node, () => refresh({ forceSize: true }), reloadScript);
+	requestAnimationFrame(() => refresh({ forceSize: true, reloadScript: true }));
 }
 
 app.registerExtension({

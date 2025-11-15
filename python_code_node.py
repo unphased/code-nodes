@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import traceback
 from contextlib import redirect_stdout
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 
@@ -19,6 +20,7 @@ class PythonCodeNode:
     INPUT_IS_LIST = False
     MAX_INPUT_SLOTS = 20
     DEFAULT_INPUT_SLOTS = 1
+    EXTENSION_ROOT = Path(__file__).resolve().parent
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -49,6 +51,15 @@ class PythonCodeNode:
             optional_inputs[f"input{slot}"] = ("STRING", multiline_str(f"input{slot}"))
         optional_inputs.update(
             {
+                "load_from_file": ("BOOLEAN", {"default": False}),
+                "script_filename": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": False,
+                        "placeholder": "Relative to this extension (e.g., scripts/example.py)",
+                    },
+                ),
                 "split_lines": ("BOOLEAN", {"default": True}),
                 "strip_empty": ("BOOLEAN", {"default": True}),
             }
@@ -92,6 +103,8 @@ class PythonCodeNode:
         input18: str = "",
         input19: str = "",
         input20: str = "",
+        load_from_file: bool = False,
+        script_filename: str = "",
         input_slots: int = DEFAULT_INPUT_SLOTS,
         split_lines: bool = True,
         strip_empty: bool = True,
@@ -127,6 +140,36 @@ class PythonCodeNode:
         ]
         normalized_inputs: List[str] = [str(value or "") for value in raw_inputs[: self.MAX_INPUT_SLOTS]]
         input_line_sets: List[List[str]] = [text.splitlines() for text in normalized_inputs]
+
+        script_source = script
+        script_path_display = ""
+        if load_from_file:
+            filename = (script_filename or "").strip()
+            if not filename:
+                return (
+                    "",
+                    [],
+                    "",
+                    "load_from_file is enabled but no script_filename was provided.",
+                    False,
+                )
+            script_path = Path(filename)
+            if not script_path.is_absolute():
+                script_path = (self.EXTENSION_ROOT / script_path).resolve()
+            else:
+                script_path = script_path.resolve()
+            script_path_display = str(script_path)
+            try:
+                script_source = script_path.read_text(encoding="utf-8")
+            except Exception as exc:  # pragma: no cover - relies on filesystem state
+                return (
+                    "",
+                    [],
+                    "",
+                    f"Failed to load script from '{filename}': {exc}",
+                    False,
+                )
+
         try:
             requested_slots = int(input_slots)
         except (TypeError, ValueError):
@@ -145,6 +188,7 @@ class PythonCodeNode:
             "inputs_lines": input_line_sets[:active_inputs],
             "active_inputs": active_inputs,
             "input_slots": active_inputs,
+            "script_path": script_path_display,
         }
 
         for index, text_value in enumerate(normalized_inputs, start=1):
@@ -156,7 +200,7 @@ class PythonCodeNode:
         try:
             local_ns.setdefault("__builtins__", __builtins__)
             with redirect_stdout(stdout_buffer):
-                exec(script, local_ns, local_ns)
+                exec(script_source, local_ns, local_ns)
             result_value = local_ns.get("result", None)
             if result_value is None and "result_text" in local_ns:
                 result_value = local_ns.get("result_text")
