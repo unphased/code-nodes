@@ -271,6 +271,24 @@ def register_routes() -> None:
     if getattr(server, "_code_nodes_routes", False):  # type: ignore[attr-defined]
         return
 
+    @server.routes.get("/code-nodes/script")
+    async def load_script(request):
+        path_value = request.rel_url.query.get("path", "")
+        try:
+            destination = _resolve_script_destination(path_value)
+        except ValueError as exc:
+            return _json_reply(False, str(exc), status=400)
+
+        if not destination.exists():
+            return _json_reply(False, "File not found.", status=404)
+
+        try:
+            contents = destination.read_text(encoding="utf-8")
+        except Exception as exc:  # pragma: no cover - filesystem
+            return _json_reply(False, f"Failed to read file: {exc}", status=500)
+
+        return _json_reply(True, "Loaded script.", path=str(destination), contents=contents)
+
     @server.routes.post("/code-nodes/script")
     async def save_script(request):
         try:

@@ -18,14 +18,6 @@ const MIN_HEIGHT = 260;
 const LOAD_WIDGET_NAME = "load_from_file";
 const FILE_WIDGET_NAME = "script_filename";
 const SCRIPT_WIDGET_NAME = "script";
-const EXTENSION_BASE_URL = (() => {
-	try {
-		return new URL("../", import.meta.url);
-	} catch (err) {
-		console.warn("[code nodes] Unable to determine extension base URL", err);
-		return null;
-	}
-})();
 const STYLE_ELEMENT_ID = "code-nodes-script-style";
 const SAVE_ENDPOINT = "/code-nodes/script";
 
@@ -169,24 +161,18 @@ function normalizeFilename(value) {
 	return value.trim().replace(/^\/+/, "");
 }
 
-function buildScriptURL(filename) {
-	if (!EXTENSION_BASE_URL) {
-		return null;
+async function fetchScriptContents(filename) {
+	const url = `${SAVE_ENDPOINT}?path=${encodeURIComponent(filename)}`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		const text = await response.text().catch(() => "");
+		throw new Error(text || `HTTP ${response.status}`);
 	}
-	const normalized = normalizeFilename(filename);
-	if (!normalized) {
-		return null;
+	const data = await response.json();
+	if (!data?.ok) {
+		throw new Error(data?.message || "Failed to load script.");
 	}
-	try {
-		const url = new URL(normalized, EXTENSION_BASE_URL);
-		if (!url.pathname.startsWith(EXTENSION_BASE_URL.pathname)) {
-			throw new Error("Resolved path escapes extension directory");
-		}
-		return url.toString();
-	} catch (err) {
-		console.warn("[code nodes] Unable to resolve script URL", err);
-		return null;
-	}
+	return data.contents || "";
 }
 
 function updatePythonPlaceholders(node) {
@@ -283,11 +269,6 @@ function updateScriptFileState(node, forceReload = false) {
 		return;
 	}
 
-	const url = buildScriptURL(filename);
-	if (!url) {
-		return;
-	}
-
 	const state = node[FILE_STATE_SYMBOL] || { token: 0, lastPath: null };
 	if (!forceReload && state.lastPath === filename && scriptWidget.value) {
 		return;
@@ -300,13 +281,7 @@ function updateScriptFileState(node, forceReload = false) {
 		loadingEl.dataset.loadingScript = "true";
 	}
 
-	fetch(url, { cache: "no-cache" })
-		.then((response) => {
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
-			}
-			return response.text();
-		})
+	fetchScriptContents(filename)
 		.then((text) => {
 			const currentState = node[FILE_STATE_SYMBOL];
 			if (!currentState || currentState.token !== requestToken) {
