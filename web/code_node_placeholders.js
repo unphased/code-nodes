@@ -13,6 +13,7 @@ const FILE_WIDGET_SYMBOL = Symbol("codeNodesFileWidgetWatcher");
 const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
 const RELOAD_WIDGET_SYMBOL = Symbol("codeNodesReloadButton");
 const SAVE_WIDGET_SYMBOL = Symbol("codeNodesSaveButton");
+const INPUT_WATCH_SYMBOL = Symbol("codeNodesInputWatchers");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
 const LOAD_WIDGET_NAME = "load_from_file";
@@ -154,9 +155,25 @@ function getActiveInputCount(node) {
 	return clampInputCount(widget.value);
 }
 
+function computeAutoInputCount(node) {
+	let lastWithContent = -1;
+	INPUT_NAMES.forEach((name, index) => {
+		const widget = findWidget(node, name);
+		if (!widget) {
+			return;
+		}
+		const value = widget.value == null ? "" : String(widget.value);
+		if (value.trim()) {
+			lastWithContent = index;
+		}
+	});
+	const desired = lastWithContent + 2; // show next empty slot
+	return Math.max(1, Math.min(MAX_INPUTS, desired));
+}
+
 function describeInputPlaceholder(name, index, splitEnabled, activeCount) {
 	if (index >= activeCount) {
-		return `${name} is inactive. Increase Input Count to expose it.`;
+		return `${name} auto-appears once the previous input has content.`;
 	}
 	const alias = index === 0 ? "`inputs[0]`/`input_text`" : `inputs[${index}]`;
 	const helper = splitEnabled ? `${name}_text` : `${name}_lines`;
@@ -193,8 +210,8 @@ function updatePythonPlaceholders(node) {
 	const scriptWidget = getScriptWidget(node);
 	if (scriptWidget?.inputEl) {
 			const message = splitEnabled
-				? "Set result/result_lines. Active inputs arrive as list[str]; use inputs[*] or input*_text for raw strings. Increase Input Count to expose up to 20 slots."
-				: "Set result/result_lines. Active inputs arrive as strings; use inputs[*] or input*_lines for split lists. Increase Input Count to expose up to 20 slots.";
+				? "Set result/result_lines. Active inputs arrive as list[str]; use inputs[*] or input*_text for raw strings. Up to 20 slots appear automatically."
+				: "Set result/result_lines. Active inputs arrive as strings; use inputs[*] or input*_lines for split lists. Up to 20 slots appear automatically.";
 		scriptWidget.inputEl.placeholder = message;
 	}
 
@@ -263,9 +280,10 @@ function updateScriptFileState(node, forceReload = false) {
 	const saveWidget = getSaveWidget(node);
 	const shouldLoad = getLoadFromFileValue(node);
 
+	toggleWidgetVisibility(filenameWidget, true);
 	toggleWidgetVisibility(reloadWidget, shouldLoad);
 	toggleWidgetVisibility(saveWidget, true);
-	const loadShown = shouldLoad && !!reloadWidget && !reloadWidget.hidden;
+	const loadShown = shouldLoad && reloadWidget && !reloadWidget.hidden;
 	markButtonSingle(reloadWidget, !loadShown);
 	markButtonSingle(saveWidget, !loadShown);
 	setScriptReadOnly(scriptWidget, shouldLoad);
@@ -365,7 +383,13 @@ function toggleWidgetVisibility(widget, shouldShow) {
 }
 
 function updateInputVisibility(node) {
-	const activeInputs = getActiveInputCount(node);
+	const countWidget = getInputCountWidget(node);
+	const autoCount = computeAutoInputCount(node);
+	if (countWidget) {
+		countWidget.value = autoCount;
+		toggleWidgetVisibility(countWidget, false);
+	}
+	const activeInputs = autoCount;
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
 		toggleWidgetVisibility(widget, index < activeInputs);
@@ -435,6 +459,31 @@ function hookInputCountWidget(node, updateFn) {
 	};
 	countWidget.value = clampInputCount(countWidget.value);
 	countWidget[COUNT_SYMBOL] = true;
+}
+
+function hookInputValueWatchers(node, updateFn) {
+	node[INPUT_WATCH_SYMBOL] ||= new Set();
+	const watchers = node[INPUT_WATCH_SYMBOL];
+	INPUT_NAMES.forEach((name) => {
+		const widget = findWidget(node, name);
+		if (!widget || watchers.has(widget)) {
+			return;
+		}
+		const originalCallback = widget.callback;
+		widget.callback = function (...args) {
+			const result = originalCallback?.apply(this, args);
+			updateFn();
+			return result;
+		};
+		if (widget.inputEl) {
+			widget.inputEl.addEventListener("input", updateFn);
+		} else {
+			requestAnimationFrame(() => {
+				widget.inputEl?.addEventListener("input", updateFn);
+			});
+		}
+		watchers.add(widget);
+	});
 }
 
 function hookLoadFromFileWidget(node, updateFn) {
@@ -561,6 +610,7 @@ function applyPlaceholderEnhancements(node) {
 	const reloadScript = () => refresh({ reloadScript: true });
 	ensureReloadButton(node, reloadScript);
 	ensureSaveButton(node, () => saveScriptToFile(node));
+	hookInputValueWatchers(node, softRefresh);
 	hookSplitLinesToggle(node, softRefresh);
 	hookInputCountWidget(node, softRefresh);
 	hookLoadFromFileWidget(node, reloadScript);

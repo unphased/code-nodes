@@ -59,7 +59,6 @@ LIST output to allow wiring into other nodes.
 | ------------ | ------- | ------------------------------------------------------ |
 | `script`     | STRING  | Python code executed with `input_text` in scope.       |
 | `input_text` | STRING  | Text value available to the script.                    |
-| `input_slots`| INT     | Optional (default `1`, max `20`). Controls how many `input*` widgets are visible. |
 | `load_from_file` | BOOLEAN | Optional (default `False`). When enabled the script is loaded from disk and the inline editor becomes read-only. |
 | `script_filename` | STRING | Optional (hidden unless `load_from_file=True`). Relative path (inside this extension directory) to the script that should be executed. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
@@ -80,10 +79,10 @@ Inside the Python script you always get:
   or a raw string when line splitting is disabled. Every input also exposes
   `_text` and `_lines` variants (e.g., `input3_text`, `input3_lines`) so you
   can work with whichever format you prefer regardless of the checkbox state.
-- `inputs`: ordered collection of all *active* inputs (count comes from the
-  `Input Slots` control). `inputs[n]` mirrors `input{n+1}` and respects
-  `split_lines`, while `inputs_text`/`inputs_lines` provide string-or-list
-  versions regardless of the toggle.
+- `inputs`: ordered collection of all *active* inputs. New `input*` widgets
+  appear automatically as you type, up to 20 total. `inputs[n]` mirrors
+  `input{n+1}` and respects `split_lines`, while `inputs_text`/`inputs_lines`
+  provide string-or-list versions regardless of the toggle.
 - `input_text`/`lines`: convenient aliases for `input1_text` and
   `input1_lines`.
 - `script_path`: absolute filesystem path of the file used when `load_from_file`
@@ -93,6 +92,9 @@ Inside the Python script you always get:
   into `result_lines` (respecting the `split_lines`/`strip_empty` settings).
   Manually assigned `result_lines` are returned exactly as provided (after
   optional whitespace stripping) and are never truncated.
+
+Additional `input*` widgets appear automatically as you fill in the last visible
+field, up to twenty total, so you never have to manage an explicit “Input Count”.
 
 #### Loading scripts from files
 

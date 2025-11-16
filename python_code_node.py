@@ -80,7 +80,7 @@ class PythonCodeNode:
                     {
                         "multiline": True,
                         "default": "result = input1",
-                        "placeholder": "Set result/result_lines; access raw data via inputs[*] (configure Input Count & split_lines below).",
+                        "placeholder": "Set result/result_lines; access raw data via inputs[*]. Additional inputs appear automatically as you type.",
                     },
                 ),
                 "input1": ("STRING", multiline_str("input1")),
