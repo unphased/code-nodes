@@ -40,6 +40,10 @@ function ensureStyles() {
 .code-nodes-action-button.code-nodes-action-button--right {
 	margin-right: 0 !important;
 }
+.code-nodes-action-button[data-single="true"] {
+	width: calc(100% - 6px) !important;
+	margin-right: 0 !important;
+}
 `.trim();
 	document.head.appendChild(style);
 }
@@ -66,6 +70,14 @@ function styleButtonElement(widget, className) {
 		}
 	};
 	apply();
+}
+
+function markButtonSingle(widget, single) {
+	const el = widget?.element;
+	if (!el) {
+		return;
+	}
+	el.dataset.single = single ? "true" : "false";
 }
 
 async function postJSON(url, body) {
@@ -252,7 +264,10 @@ function updateScriptFileState(node, forceReload = false) {
 	const shouldLoad = getLoadFromFileValue(node);
 
 	toggleWidgetVisibility(reloadWidget, shouldLoad);
-	toggleWidgetVisibility(saveWidget, shouldLoad);
+	toggleWidgetVisibility(saveWidget, true);
+	const loadShown = shouldLoad && !!reloadWidget && !reloadWidget.hidden;
+	markButtonSingle(reloadWidget, !loadShown);
+	markButtonSingle(saveWidget, !loadShown);
 	setScriptReadOnly(scriptWidget, shouldLoad);
 
 	if (!shouldLoad || !scriptWidget) {
