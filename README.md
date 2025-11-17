@@ -64,7 +64,7 @@ LIST output to allow wiring into other nodes.
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
 | `delimiter`  | STRING  | Optional custom delimiter (default `", "`). Clear the field to rely solely on newline parsing. |
-| `output_delimiter` | STRING | Controls how nested lists are joined when auto-generating `result_lines`/`result_lines_list` (default `", "`). |
+| `output_inner_delimiter` | STRING | Controls how nested lists are joined when auto-generating `result_lines`/`result_lines_list` (default `", "`). |
 
 Outputs `(result, result_lines, result_lines_list, stdout, stderr, ok)` where:
 
@@ -100,7 +100,7 @@ Inside the Python script you always get:
 - `script_path`: absolute filesystem path of the file used when `load_from_file`
   is enabled, otherwise an empty string.
 - `delimiter`: the currently configured delimiter string (blank when unused).
-- `output_delimiter`: the delimiter used when rendering nested list entries for
+- `output_inner_delimiter`: the delimiter used when rendering nested list entries for
   `result_lines` and `result_lines_list`.
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. Inside your script, treat `result_lines` as a list of strings. If you

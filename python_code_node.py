@@ -73,7 +73,7 @@ class PythonCodeNode:
                 "placeholder": "Optional custom delimiter (comma, pipe, etc.)",
             },
         )
-        optional_inputs["output_delimiter"] = (
+        optional_inputs["output_inner_delimiter"] = (
             "STRING",
             {
                 "default": ", ",
@@ -136,7 +136,7 @@ class PythonCodeNode:
         split_lines: bool = True,
         strip_empty: bool = True,
         delimiter: str = ", ",
-        output_delimiter: str = ", ",
+        output_inner_delimiter: str = ", ",
     ) -> Tuple[str, str, List[str], str, str, bool]:
         """Execute *script* and expose helpers for returning data to ComfyUI."""
 
@@ -239,7 +239,7 @@ class PythonCodeNode:
             "input_slots": active_inputs,
             "script_path": script_path_display,
             "delimiter": delimiter_value,
-            "output_delimiter": output_delimiter,
+            "output_inner_delimiter": output_inner_delimiter,
         }
 
         for index, text_value in enumerate(normalized_inputs, start=1):
@@ -273,7 +273,9 @@ class PythonCodeNode:
         stdout = stdout_buffer.getvalue()
 
         if not result_lines_list and isinstance(result_value, (list, tuple)):
-            result_lines_list = [_stringify_result_element(item, output_delimiter) for item in result_value]
+            result_lines_list = [
+                _stringify_result_element(item, output_inner_delimiter) for item in result_value
+            ]
         elif split_lines:
             auto_lines = result_text.splitlines()
             if strip_empty:
@@ -281,7 +283,9 @@ class PythonCodeNode:
             if not result_lines_list:
                 result_lines_list = auto_lines
 
-        result_lines_list = [_stringify_result_element(line, output_delimiter) for line in result_lines_list]
+        result_lines_list = [
+            _stringify_result_element(line, output_inner_delimiter) for line in result_lines_list
+        ]
         if strip_empty:
             result_lines_list = [line for line in result_lines_list if line.strip()]
         result_lines_list_output = list(result_lines_list)

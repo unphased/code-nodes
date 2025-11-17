@@ -10,13 +10,13 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 - **script_filename** – Relative path inside this extension (or absolute path) to load/save when `load_from_file` is used.
 - **split_lines** / **strip_empty** – Control how `input*` data and auto-generated `result_lines` behave.
 - **delimiter** – Optional custom delimiter for splitting inputs (default `", "`). When set, each `input` and the `inputs` helper turn into `list[str]` even if `split_lines` is disabled. Clear the field to rely solely on newline parsing.
-- **output_delimiter** – Determines how nested lists are joined when the node auto-builds `result_lines` or `result_lines_list` (default `", "`).
+- **output_inner_delimiter** – Determines how nested lists are joined when the node auto-builds `result_lines` or `result_lines_list` (default `", "`).
 
 ## Outputs
 
 - **result** – Whatever you assign to `result` (or `result_text`) inside the script.
 - **result_lines** – A newline-delimited string assembled from the `result_lines` list you manage inside the script. When you leave it empty, the node auto-fills it by formatting each element of a list/tuple `result` into comma-delimited text (e.g., `['a', 'b'] → "a, b"`) or by splitting the `result` text (respecting the `split_lines` toggle).
-- **result_lines_list** – The same data as `result_lines`, but kept as a Python list so other nodes can inspect each element. Nested lists are converted to strings using the `output_delimiter`.
+- **result_lines_list** – The same data as `result_lines`, but kept as a Python list so other nodes can inspect each element. Nested lists are converted to strings using the `output_inner_delimiter`.
 - **stdout** – Captures anything printed during execution.
 - **stderr** – Formatted traceback when an exception occurs.
 - **ok** – Boolean flag indicating success/failure.
@@ -28,7 +28,7 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 - `script_path` – Absolute path of the file used when loading from disk (empty otherwise).
 - `stdout` capture – Anything printed inside the script shows up in the node’s `stdout` output.
 - `delimiter` – The configured delimiter string (blank when unused).
-- `output_delimiter` – The delimiter used when formatting nested list entries for `result_lines`/`result_lines_list`.
+- `output_inner_delimiter` – The delimiter used when formatting nested list entries for `result_lines`/`result_lines_list`.
 
 ## File Workflow
 
