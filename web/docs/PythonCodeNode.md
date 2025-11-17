@@ -10,6 +10,14 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 - **script_filename** – Relative path inside this extension (or absolute path) to load/save when `load_from_file` is used.
 - **split_lines** / **strip_empty** – Control how `input*` data and auto-generated `result_lines` behave.
 
+## Outputs
+
+- **result** – Whatever you assign to `result` (or `result_text`) inside the script.
+- **result_lines** – A newline-delimited string assembled from the `result_lines` list you manage inside the script (or the auto-split `result` when left empty).
+- **stdout** – Captures anything printed during execution.
+- **stderr** – Formatted traceback when an exception occurs.
+- **ok** – Boolean flag indicating success/failure.
+
 ## Helpers Available in the Script
 
 - `inputs`, `inputs_text`, `inputs_lines` – Ordered collections of the active inputs in list-or-string form.

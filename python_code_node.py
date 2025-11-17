@@ -22,9 +22,9 @@ class PythonCodeNode:
 
     CATEGORY = "utils/code"
     FUNCTION = "run"
-    RETURN_TYPES = ("STRING", "LIST", "STRING", "STRING", "BOOLEAN")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "BOOLEAN")
     RETURN_NAMES = ("result", "result_lines", "stdout", "stderr", "ok")
-    OUTPUT_IS_LIST = (False, True, False, False, False)
+    OUTPUT_IS_LIST = (False, False, False, False, False)
     INPUT_IS_LIST = False
     MAX_INPUT_SLOTS = 20
     DEFAULT_INPUT_SLOTS = 1
@@ -118,7 +118,7 @@ class PythonCodeNode:
         stderr = ""
         ok = True
         result_text = ""
-        result_lines: List[str]
+        result_lines_list: List[str] = []
         raw_inputs = [
             input1,
             input2,
@@ -210,15 +210,15 @@ class PythonCodeNode:
             result_text = "" if result_value is None else str(result_value)
             result_lines_value = local_ns.get("result_lines", None)
             if result_lines_value is None:
-                result_lines = []
+                result_lines_list = []
             elif isinstance(result_lines_value, list):
-                result_lines = result_lines_value
+                result_lines_list = result_lines_value
             else:
-                result_lines = list(result_lines_value)
+                result_lines_list = list(result_lines_value)
         except Exception:  # pragma: no cover - safety against runtime errors
             ok = False
             result_text = ""
-            result_lines = []
+            result_lines_list = []
             stderr = traceback.format_exc()
 
         stdout = stdout_buffer.getvalue()
@@ -227,14 +227,15 @@ class PythonCodeNode:
             auto_lines = result_text.splitlines()
             if strip_empty:
                 auto_lines = [line for line in auto_lines if line.strip()]
-            if not result_lines:
-                result_lines = auto_lines
+            if not result_lines_list:
+                result_lines_list = auto_lines
 
-        result_lines = [str(line) for line in result_lines]
+        result_lines_list = [str(line) for line in result_lines_list]
         if strip_empty:
-            result_lines = [line for line in result_lines if line.strip()]
+            result_lines_list = [line for line in result_lines_list if line.strip()]
+        result_lines_text = "\n".join(result_lines_list)
 
-        return result_text, result_lines, stdout, stderr, ok
+        return result_text, result_lines_text, stdout, stderr, ok
 
 
 def _resolve_script_destination(filename: str) -> Path:

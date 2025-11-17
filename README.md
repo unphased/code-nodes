@@ -67,8 +67,10 @@ LIST output to allow wiring into other nodes.
 Outputs `(result, result_lines, stdout, stderr, ok)` where:
 
 - `result` comes from the `result` (or `result_text`) variable inside the script.
-- `result_lines` can be directly assigned inside the script, otherwise it will
-  be auto-populated from `result` when splitting is enabled.
+- `result_lines` is returned as a newline-delimited string, assembled from the
+  `result_lines` list you manage inside the script (or auto-populated from
+  `result` when splitting is enabled). Treat `result_lines` inside Python as a
+  list; the node converts it to text when emitting.
 - `stdout` captures anything printed by the script.
 - `stderr` contains the formatted traceback if an exception occurs.
 - `ok` is `True` when the script executes without raising.
@@ -88,10 +90,11 @@ Inside the Python script you always get:
 - `script_path`: absolute filesystem path of the file used when `load_from_file`
   is enabled, otherwise an empty string.
 - `result`/`result_lines`: start empty; assign to them when you want to emit
-  values. If you only populate `result`, the node will automatically split it
-  into `result_lines` (respecting the `split_lines`/`strip_empty` settings).
-  Manually assigned `result_lines` are returned exactly as provided (after
-  optional whitespace stripping) and are never truncated.
+  values. Inside your script, treat `result_lines` as a list of strings. If you
+  only populate `result`, the node will automatically split it into
+  `result_lines` (respecting the `split_lines`/`strip_empty` settings). Before
+  returning, the node converts the list to a newline-delimited string for the
+  `result_lines` output socket.
 
 Additional `input*` widgets appear automatically as you fill in the last visible
 field, up to twenty total, so you never have to manage an explicit “Input Count”.
