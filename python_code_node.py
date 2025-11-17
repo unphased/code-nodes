@@ -43,7 +43,18 @@ class PythonCodeNode:
                 "placeholder": placeholder,
             }
 
-        optional_inputs = {
+        config_inputs = {
+            "load_from_file": ("BOOLEAN", {"default": False}),
+            "script_filename": (
+                "STRING",
+                {
+                    "default": "",
+                    "multiline": False,
+                    "placeholder": "Relative to this extension (e.g., scripts/example.py)",
+                },
+            ),
+            "split_lines": ("BOOLEAN", {"default": True}),
+            "strip_empty": ("BOOLEAN", {"default": True}),
             "input_slots": (
                 "INT",
                 {
@@ -53,25 +64,12 @@ class PythonCodeNode:
                     "step": 1,
                     "display": "number",
                 },
-            )
+            ),
         }
+
+        optional_inputs = dict(config_inputs)
         for slot in range(2, cls.MAX_INPUT_SLOTS + 1):
             optional_inputs[f"input{slot}"] = ("STRING", multiline_str(f"input{slot}"))
-        optional_inputs.update(
-            {
-                "load_from_file": ("BOOLEAN", {"default": False}),
-                "script_filename": (
-                    "STRING",
-                    {
-                        "default": "",
-                        "multiline": False,
-                        "placeholder": "Relative to this extension (e.g., scripts/example.py)",
-                    },
-                ),
-                "split_lines": ("BOOLEAN", {"default": True}),
-                "strip_empty": ("BOOLEAN", {"default": True}),
-            }
-        )
 
         return {
             "required": {
