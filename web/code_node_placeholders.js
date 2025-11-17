@@ -384,12 +384,12 @@ function toggleWidgetVisibility(widget, shouldShow) {
 
 function updateInputVisibility(node) {
 	const countWidget = getInputCountWidget(node);
-	const manualCount = countWidget ? clampInputCount(countWidget.value) : DEFAULT_INPUTS;
 	const autoCount = computeAutoInputCount(node);
-	const activeInputs = Math.max(manualCount, autoCount);
-	if (countWidget && countWidget.value !== activeInputs) {
-		countWidget.value = activeInputs;
+	if (countWidget) {
+		countWidget.value = autoCount;
+		toggleWidgetVisibility(countWidget, false);
 	}
+	const activeInputs = autoCount;
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
 		toggleWidgetVisibility(widget, index < activeInputs);
