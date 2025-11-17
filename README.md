@@ -63,6 +63,7 @@ LIST output to allow wiring into other nodes.
 | `script_filename` | STRING | Optional (hidden unless `load_from_file=True`). Relative path (inside this extension directory) to the script that should be executed. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
+| `delimiter`  | STRING  | Optional custom delimiter for splitting inputs. Leave blank to rely solely on newline parsing. |
 
 Outputs `(result, result_lines, stdout, stderr, ok)` where:
 
@@ -85,12 +86,15 @@ Inside the Python script you always get:
   can work with whichever format you prefer regardless of the checkbox state.
 - `inputs`: ordered collection of all *active* inputs. New `input*` widgets
   appear automatically as you type, up to 20 total. `inputs[n]` mirrors
-  `input{n+1}` and respects `split_lines`, while `inputs_text`/`inputs_lines`
-  provide string-or-list versions regardless of the toggle.
+  `input{n+1}` and becomes a `list[str]` whenever either the `delimiter`
+  field is populated or `split_lines=True`. Otherwise it remains a string.
+  `inputs_text`/`inputs_lines` provide string-or-list versions regardless of
+  the toggle (newline splitting drives the `_lines` variants).
 - `input_text`/`lines`: convenient aliases for `input1_text` and
   `input1_lines`.
 - `script_path`: absolute filesystem path of the file used when `load_from_file`
   is enabled, otherwise an empty string.
+- `delimiter`: the currently configured delimiter string (blank when unused).
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. Inside your script, treat `result_lines` as a list of strings. If you
   only populate `result`, the node will automatically either convert each item

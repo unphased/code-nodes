@@ -14,6 +14,7 @@ const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
 const RELOAD_WIDGET_SYMBOL = Symbol("codeNodesReloadButton");
 const SAVE_WIDGET_SYMBOL = Symbol("codeNodesSaveButton");
 const INPUT_WATCH_SYMBOL = Symbol("codeNodesInputWatchers");
+const DELIMITER_WIDGET_SYMBOL = Symbol("codeNodesDelimiterWatcher");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
 const LOAD_WIDGET_NAME = "load_from_file";
@@ -111,6 +112,15 @@ function getSplitLinesValue(node) {
 	return !!splitWidget.value;
 }
 
+function getDelimiterValue(node) {
+	const widget = findWidget(node, "delimiter");
+	if (!widget) {
+		return "";
+	}
+	const value = widget.value ?? "";
+	return typeof value === "string" ? value : String(value);
+}
+
 function getLoadFromFileValue(node) {
 	const widget = findWidget(node, LOAD_WIDGET_NAME);
 	if (!widget) {
@@ -175,15 +185,22 @@ function computeInputCounts(node) {
 	return { used, visible };
 }
 
-function describeInputPlaceholder(name, index, splitEnabled, activeCount) {
+function shouldUseListInputs(node) {
+	const delimiter = getDelimiterValue(node);
+	return getSplitLinesValue(node) || Boolean(delimiter.trim());
+}
+
+function describeInputPlaceholder(name, index, listMode, activeCount) {
 	if (index >= activeCount) {
 		return `${name} auto-appears once the previous input has content.`;
 	}
 	const alias = index === 0 ? "`inputs[0]`/`input_text`" : `inputs[${index}]`;
-	const helper = splitEnabled ? `${name}_text` : `${name}_lines`;
-	const descriptor = splitEnabled ? "list[str]" : "string";
-	const extra = index === 0 ? (splitEnabled ? " (`lines` shares this data)" : " (`input_text` shares this data)") : "";
-	const helperNote = splitEnabled ? `${helper} gives the raw string.` : `${helper} lists the split lines.`;
+	const helper = listMode ? `${name}_text` : `${name}_lines`;
+	const descriptor = listMode ? "list[str]" : "string";
+	const extra = index === 0 ? (listMode ? " (`lines` shares this data)" : " (`input_text` shares this data)") : "";
+	const helperNote = listMode
+		? `${helper} keeps the unsplit string.`
+		: `${helper} provides newline-split entries even while inputs arrive as strings.`;
 	return `${name} → ${descriptor} via ${alias}${extra}; ${helperNote}`;
 }
 
@@ -209,20 +226,20 @@ async function fetchScriptContents(filename) {
 }
 
 function updatePythonPlaceholders(node) {
-	const splitEnabled = getSplitLinesValue(node);
+	const listMode = shouldUseListInputs(node);
 	const activeInputs = getActiveInputCount(node);
 	const scriptWidget = getScriptWidget(node);
 	if (scriptWidget?.inputEl) {
-			const message = splitEnabled
-				? "Set result/result_lines. Active inputs arrive as list[str]; use inputs[*] or input*_text for raw strings. Up to 20 slots appear automatically."
-				: "Set result/result_lines. Active inputs arrive as strings; use inputs[*] or input*_lines for split lists. Up to 20 slots appear automatically.";
+		const message = listMode
+			? "Set result/result_lines. Active inputs arrive as list[str] (delimiter or split_lines); use inputs[*] or input*_text for raw strings."
+			: "Set result/result_lines. Active inputs arrive as strings; set delimiter or enable split_lines to get list[str] inputs.";
 		scriptWidget.inputEl.placeholder = message;
 	}
 
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
 		if (widget?.inputEl) {
-			widget.inputEl.placeholder = describeInputPlaceholder(name, index, splitEnabled, activeInputs);
+			widget.inputEl.placeholder = describeInputPlaceholder(name, index, listMode, activeInputs);
 		}
 	});
 }
@@ -522,6 +539,20 @@ function hookFilenameWidget(node, updateFn) {
 	widget[FILE_WIDGET_SYMBOL] = true;
 }
 
+function hookDelimiterWidget(node, updateFn) {
+	const widget = findWidget(node, "delimiter");
+	if (!widget || widget[DELIMITER_WIDGET_SYMBOL]) {
+		return;
+	}
+	const originalCallback = widget.callback;
+	widget.callback = function (...args) {
+		const result = originalCallback?.apply(this, args);
+		updateFn();
+		return result;
+	};
+	widget[DELIMITER_WIDGET_SYMBOL] = true;
+}
+
 function hookResize(node, updateFn) {
 	if (node[RESIZE_SYMBOL]) {
 		return;
@@ -620,6 +651,7 @@ function applyPlaceholderEnhancements(node) {
 	ensureSaveButton(node, () => saveScriptToFile(node));
 	hookInputValueWatchers(node, softRefresh);
 	hookSplitLinesToggle(node, softRefresh);
+	hookDelimiterWidget(node, softRefresh);
 	hookInputCountWidget(node, softRefresh);
 	hookLoadFromFileWidget(node, reloadScript);
 	hookFilenameWidget(node, reloadScript);

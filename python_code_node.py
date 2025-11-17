@@ -57,6 +57,14 @@ class PythonCodeNode:
         )
         optional_inputs["split_lines"] = ("BOOLEAN", {"default": True})
         optional_inputs["strip_empty"] = ("BOOLEAN", {"default": True})
+        optional_inputs["delimiter"] = (
+            "STRING",
+            {
+                "default": "",
+                "multiline": False,
+                "placeholder": "Optional custom delimiter (comma, pipe, etc.)",
+            },
+        )
         optional_inputs["input_slots"] = (
             "INT",
             {
@@ -111,6 +119,7 @@ class PythonCodeNode:
         input_slots: int = DEFAULT_INPUT_SLOTS,
         split_lines: bool = True,
         strip_empty: bool = True,
+        delimiter: str = "",
     ) -> Tuple[str, List[str], str, str, bool]:
         """Execute *script* and expose helpers for returning data to ComfyUI."""
 
@@ -144,6 +153,24 @@ class PythonCodeNode:
         ]
         normalized_inputs: List[str] = [str(value or "") for value in raw_inputs[: self.MAX_INPUT_SLOTS]]
         input_line_sets: List[List[str]] = [text.splitlines() for text in normalized_inputs]
+        delimiter_value = str(delimiter or "")
+        use_delimiter = bool(delimiter_value)
+
+        def split_text(value: str) -> List[str]:
+            parts = [value]
+            if use_delimiter and delimiter_value:
+                new_parts: List[str] = []
+                for chunk in parts:
+                    new_parts.extend(chunk.split(delimiter_value))
+                parts = new_parts
+            if split_lines:
+                new_parts = []
+                for chunk in parts:
+                    new_parts.extend(chunk.splitlines())
+                parts = new_parts
+            return parts
+
+        split_inputs: List[List[str]] = [split_text(text) for text in normalized_inputs]
 
         script_source = script
         script_path_display = ""
@@ -181,7 +208,8 @@ class PythonCodeNode:
         active_inputs = max(1, min(self.MAX_INPUT_SLOTS, requested_slots))
         primary_input = normalized_inputs[0]
         primary_lines = input_line_sets[0]
-        inputs_payload = input_line_sets[:active_inputs] if split_lines else normalized_inputs[:active_inputs]
+        split_mode = split_lines or use_delimiter
+        inputs_payload = split_inputs[:active_inputs] if split_mode else normalized_inputs[:active_inputs]
         local_ns: Dict[str, Any] = {
             "input_text": primary_input,
             "lines": primary_lines,
@@ -193,13 +221,14 @@ class PythonCodeNode:
             "active_inputs": active_inputs,
             "input_slots": active_inputs,
             "script_path": script_path_display,
+            "delimiter": delimiter_value,
         }
 
         for index, text_value in enumerate(normalized_inputs, start=1):
             lines = input_line_sets[index - 1]
             local_ns[f"input{index}_text"] = text_value
             local_ns[f"input{index}_lines"] = lines
-            local_ns[f"input{index}"] = lines if split_lines else text_value
+            local_ns[f"input{index}"] = split_inputs[index - 1] if split_mode else text_value
 
         try:
             local_ns.setdefault("__builtins__", __builtins__)

@@ -9,6 +9,7 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 - **load_from_file** – When enabled, the script text box becomes read-only and mirrors the file on disk.
 - **script_filename** – Relative path inside this extension (or absolute path) to load/save when `load_from_file` is used.
 - **split_lines** / **strip_empty** – Control how `input*` data and auto-generated `result_lines` behave.
+- **delimiter** – Optional custom delimiter for splitting inputs. When set, each `input` and the `inputs` helper turn into `list[str]` even if `split_lines` is disabled. Leave blank to rely solely on newline parsing.
 
 ## Outputs
 
@@ -20,10 +21,11 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 
 ## Helpers Available in the Script
 
-- `inputs`, `inputs_text`, `inputs_lines` – Ordered collections of the active inputs in list-or-string form.
+- `inputs`, `inputs_text`, `inputs_lines` – Ordered collections of the active inputs. `inputs[n]` expands to `list[str]` whenever you set a delimiter or enable `split_lines`; otherwise it remains a raw string. `_text`/`_lines` variants let you pick the format you prefer.
 - `input_text` / `lines` – Aliases for the first input (`input1`).
 - `script_path` – Absolute path of the file used when loading from disk (empty otherwise).
 - `stdout` capture – Anything printed inside the script shows up in the node’s `stdout` output.
+- `delimiter` – The configured delimiter string (blank when unused).
 
 ## File Workflow
 
