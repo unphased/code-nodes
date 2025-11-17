@@ -436,7 +436,7 @@ function updateInputVisibility(node) {
 		toggleWidgetVisibility(widget, index < activeInputs);
 	});
 
-	node.graph?.setDirtyCanvas(true, true);
+	recomputeNodeSize(node);
 }
 
 function ensureScriptSizing(node) {
