@@ -13,7 +13,6 @@ const FILE_WIDGET_SYMBOL = Symbol("codeNodesFileWidgetWatcher");
 const FILE_STATE_SYMBOL = Symbol("codeNodesFileState");
 const RELOAD_WIDGET_SYMBOL = Symbol("codeNodesReloadButton");
 const SAVE_WIDGET_SYMBOL = Symbol("codeNodesSaveButton");
-const INPUT_TEMPLATE_SYMBOL = Symbol("codeNodesInputTemplates");
 const INPUT_WATCH_SYMBOL = Symbol("codeNodesInputWatchers");
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 260;
@@ -72,45 +71,6 @@ function styleButtonElement(widget, className) {
 		}
 	};
 	apply();
-}
-
-function captureInputTemplates(node) {
-	if (node[INPUT_TEMPLATE_SYMBOL]) {
-		return;
-	}
-	node[INPUT_TEMPLATE_SYMBOL] = (node.inputs || []).map((input) => ({
-		name: input?.name,
-		type: input?.type,
-	}));
-}
-
-function syncInputConnectors(node, desiredCount) {
-	captureInputTemplates(node);
-	const templates = node[INPUT_TEMPLATE_SYMBOL];
-	if (!templates || !Array.isArray(templates)) {
-		return;
-	}
-	const current = node.inputs?.length ?? 0;
-	if (!node.inputs) {
-		node.inputs = [];
-	}
-	if (current > desiredCount) {
-		for (let i = current - 1; i >= desiredCount; i--) {
-			const slot = node.inputs[i];
-			if (slot?.link != null) {
-				break;
-			}
-			node.removeInput(i);
-		}
-	} else if (current < desiredCount) {
-		for (let i = current; i < desiredCount && i < templates.length; i++) {
-			const template = templates[i];
-			if (!template) {
-				break;
-			}
-			node.addInput(template.name, template.type || "*");
-		}
-	}
 }
 
 function markButtonSingle(widget, single) {
@@ -430,7 +390,6 @@ function updateInputVisibility(node) {
 		toggleWidgetVisibility(countWidget, false);
 	}
 	const activeInputs = autoCount;
-	syncInputConnectors(node, activeInputs);
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
 		toggleWidgetVisibility(widget, index < activeInputs);
