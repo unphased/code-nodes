@@ -17,6 +17,13 @@ except Exception:  # pragma: no cover - tests may run without ComfyUI
     PromptServer = None
 
 
+def _stringify_result_element(value: Any) -> str:
+    if isinstance(value, (list, tuple)):
+        parts = [_stringify_result_element(item) for item in value]
+        return ", ".join(parts)
+    return str(value)
+
+
 class PythonCodeNode:
     """Execute Python code with helpers for working with ComfyUI strings."""
 
@@ -255,7 +262,7 @@ class PythonCodeNode:
         stdout = stdout_buffer.getvalue()
 
         if not result_lines_list and isinstance(result_value, (list, tuple)):
-            result_lines_list = [str(item) for item in result_value]
+            result_lines_list = [_stringify_result_element(item) for item in result_value]
         elif split_lines:
             auto_lines = result_text.splitlines()
             if strip_empty:

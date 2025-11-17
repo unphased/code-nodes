@@ -71,7 +71,8 @@ Outputs `(result, result_lines, stdout, stderr, ok)` where:
 - `result_lines` is returned as a newline-delimited string, assembled from the
   `result_lines` list you manage inside the script. If you leave the list empty,
   the node auto-populates it either by splitting `result` (when `split_lines`
-  is enabled) or by stringifying each element when `result` is a list/tuple.
+  is enabled) or by formatting each element of a list/tuple result so that
+  nested lists become comma-delimited strings (e.g., `['a', 'b'] → "a, b"`).
   Treat `result_lines` inside Python as a list; the node converts it to text
   when emitting.
 - `stdout` captures anything printed by the script.
@@ -98,7 +99,7 @@ Inside the Python script you always get:
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. Inside your script, treat `result_lines` as a list of strings. If you
   only populate `result`, the node will automatically either convert each item
-  of a list/tuple result into its own line or split the string output into
+  of a list/tuple result into its own comma-delimited line or split the string output into
   lines (respecting the `split_lines`/`strip_empty` settings). Before returning,
   the node converts the list to a newline-delimited string for the
   `result_lines` output socket.
