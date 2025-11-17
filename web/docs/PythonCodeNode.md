@@ -13,7 +13,7 @@ Run inline Python scripts directly inside ComfyUI. The node exposes a rich set o
 ## Outputs
 
 - **result** – Whatever you assign to `result` (or `result_text`) inside the script.
-- **result_lines** – A newline-delimited string assembled from the `result_lines` list you manage inside the script (or the auto-split `result` when left empty).
+- **result_lines** – A newline-delimited string assembled from the `result_lines` list you manage inside the script. When you leave it empty, the node auto-fills it by stringifying each element of a list/tuple `result` or by splitting the `result` text (respecting the `split_lines` toggle).
 - **stdout** – Captures anything printed during execution.
 - **stderr** – Formatted traceback when an exception occurs.
 - **ok** – Boolean flag indicating success/failure.

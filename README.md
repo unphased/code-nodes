@@ -68,9 +68,11 @@ Outputs `(result, result_lines, stdout, stderr, ok)` where:
 
 - `result` comes from the `result` (or `result_text`) variable inside the script.
 - `result_lines` is returned as a newline-delimited string, assembled from the
-  `result_lines` list you manage inside the script (or auto-populated from
-  `result` when splitting is enabled). Treat `result_lines` inside Python as a
-  list; the node converts it to text when emitting.
+  `result_lines` list you manage inside the script. If you leave the list empty,
+  the node auto-populates it either by splitting `result` (when `split_lines`
+  is enabled) or by stringifying each element when `result` is a list/tuple.
+  Treat `result_lines` inside Python as a list; the node converts it to text
+  when emitting.
 - `stdout` captures anything printed by the script.
 - `stderr` contains the formatted traceback if an exception occurs.
 - `ok` is `True` when the script executes without raising.
@@ -91,9 +93,10 @@ Inside the Python script you always get:
   is enabled, otherwise an empty string.
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. Inside your script, treat `result_lines` as a list of strings. If you
-  only populate `result`, the node will automatically split it into
-  `result_lines` (respecting the `split_lines`/`strip_empty` settings). Before
-  returning, the node converts the list to a newline-delimited string for the
+  only populate `result`, the node will automatically either convert each item
+  of a list/tuple result into its own line or split the string output into
+  lines (respecting the `split_lines`/`strip_empty` settings). Before returning,
+  the node converts the list to a newline-delimited string for the
   `result_lines` output socket.
 
 Additional `input*` widgets appear automatically as you fill in the last visible

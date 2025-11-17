@@ -119,6 +119,7 @@ class PythonCodeNode:
         ok = True
         result_text = ""
         result_lines_list: List[str] = []
+        result_value: Any = None
         raw_inputs = [
             input1,
             input2,
@@ -220,10 +221,13 @@ class PythonCodeNode:
             result_text = ""
             result_lines_list = []
             stderr = traceback.format_exc()
+            result_value = None
 
         stdout = stdout_buffer.getvalue()
 
-        if split_lines:
+        if not result_lines_list and isinstance(result_value, (list, tuple)):
+            result_lines_list = [str(item) for item in result_value]
+        elif split_lines:
             auto_lines = result_text.splitlines()
             if strip_empty:
                 auto_lines = [line for line in auto_lines if line.strip()]
