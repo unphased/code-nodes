@@ -67,7 +67,7 @@ class PythonCodeNode:
         optional_inputs["delimiter"] = (
             "STRING",
             {
-                "default": "",
+                "default": ", ",
                 "multiline": False,
                 "placeholder": "Optional custom delimiter (comma, pipe, etc.)",
             },
@@ -126,7 +126,7 @@ class PythonCodeNode:
         input_slots: int = DEFAULT_INPUT_SLOTS,
         split_lines: bool = True,
         strip_empty: bool = True,
-        delimiter: str = "",
+        delimiter: str = ", ",
     ) -> Tuple[str, List[str], str, str, bool]:
         """Execute *script* and expose helpers for returning data to ComfyUI."""
 

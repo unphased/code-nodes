@@ -63,7 +63,7 @@ LIST output to allow wiring into other nodes.
 | `script_filename` | STRING | Optional (hidden unless `load_from_file=True`). Relative path (inside this extension directory) to the script that should be executed. |
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
-| `delimiter`  | STRING  | Optional custom delimiter for splitting inputs. Leave blank to rely solely on newline parsing. |
+| `delimiter`  | STRING  | Optional custom delimiter (default `", "`). Clear the field to rely solely on newline parsing. |
 
 Outputs `(result, result_lines, stdout, stderr, ok)` where:
 
