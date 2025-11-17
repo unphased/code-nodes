@@ -571,7 +571,7 @@ function ensureReloadButton(node, reloadFn) {
 	if (node[RELOAD_WIDGET_SYMBOL] || typeof node.addWidget !== "function") {
 		return node[RELOAD_WIDGET_SYMBOL];
 	}
-	const widget = node.addWidget("button", "Reload File", () => reloadFn(), null, {
+	const widget = node.addWidget("button", "Reload File", null, () => reloadFn(), {
 		serialize: false,
 	});
 	widget.description = "Reloads script preview from disk.";
@@ -585,7 +585,7 @@ function ensureSaveButton(node, saveFn) {
 	if (node[SAVE_WIDGET_SYMBOL] || typeof node.addWidget !== "function") {
 		return node[SAVE_WIDGET_SYMBOL];
 	}
-	const widget = node.addWidget("button", "Save File", () => saveFn(), null, {
+	const widget = node.addWidget("button", "Save File", null, () => saveFn(), {
 		serialize: false,
 	});
 	widget.description = "Writes the current script to the chosen file.";
