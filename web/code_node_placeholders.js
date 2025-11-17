@@ -409,16 +409,21 @@ function toggleWidgetVisibility(widget, shouldShow) {
 			height: widget.options.getHeight,
 		};
 	}
+	if (!widget.__codeComputeSize) {
+		widget.__codeComputeSize = widget.computeSize;
+	}
 
 	if (shouldShow) {
 		const { min, max, height } = widget.__codeHeightFns;
 		widget.options.getMinHeight = min;
 		widget.options.getMaxHeight = max;
 		widget.options.getHeight = height;
+		widget.computeSize = widget.__codeComputeSize || widget.computeSize;
 	} else {
 		widget.options.getMinHeight = () => 0;
 		widget.options.getMaxHeight = () => 0;
 		widget.options.getHeight = () => 0;
+		widget.computeSize = () => [0, 0];
 	}
 }
 
