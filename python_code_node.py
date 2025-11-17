@@ -17,10 +17,11 @@ except Exception:  # pragma: no cover - tests may run without ComfyUI
     PromptServer = None
 
 
-def _stringify_result_element(value: Any) -> str:
+def _stringify_result_element(value: Any, delimiter: str) -> str:
     if isinstance(value, (list, tuple)):
-        parts = [_stringify_result_element(item) for item in value]
-        return ", ".join(parts)
+        parts = [_stringify_result_element(item, delimiter) for item in value]
+        joiner = delimiter if delimiter is not None else ""
+        return joiner.join(parts)
     return str(value)
 
 
@@ -29,9 +30,9 @@ class PythonCodeNode:
 
     CATEGORY = "utils/code"
     FUNCTION = "run"
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "BOOLEAN")
-    RETURN_NAMES = ("result", "result_lines", "stdout", "stderr", "ok")
-    OUTPUT_IS_LIST = (False, False, False, False, False)
+    RETURN_TYPES = ("STRING", "STRING", "LIST", "STRING", "STRING", "BOOLEAN")
+    RETURN_NAMES = ("result", "result_lines", "result_lines_list", "stdout", "stderr", "ok")
+    OUTPUT_IS_LIST = (False, False, True, False, False, False)
     INPUT_IS_LIST = False
     MAX_INPUT_SLOTS = 20
     DEFAULT_INPUT_SLOTS = 1
@@ -70,6 +71,14 @@ class PythonCodeNode:
                 "default": ", ",
                 "multiline": False,
                 "placeholder": "Optional custom delimiter (comma, pipe, etc.)",
+            },
+        )
+        optional_inputs["output_delimiter"] = (
+            "STRING",
+            {
+                "default": ", ",
+                "multiline": False,
+                "placeholder": "Join nested lists in auto result_lines (default matches delimiter).",
             },
         )
         optional_inputs["input_slots"] = (
@@ -127,7 +136,8 @@ class PythonCodeNode:
         split_lines: bool = True,
         strip_empty: bool = True,
         delimiter: str = ", ",
-    ) -> Tuple[str, List[str], str, str, bool]:
+        output_delimiter: str = ", ",
+    ) -> Tuple[str, str, List[str], str, str, bool]:
         """Execute *script* and expose helpers for returning data to ComfyUI."""
 
         stdout_buffer = io.StringIO()
@@ -229,6 +239,7 @@ class PythonCodeNode:
             "input_slots": active_inputs,
             "script_path": script_path_display,
             "delimiter": delimiter_value,
+            "output_delimiter": output_delimiter,
         }
 
         for index, text_value in enumerate(normalized_inputs, start=1):
@@ -262,7 +273,7 @@ class PythonCodeNode:
         stdout = stdout_buffer.getvalue()
 
         if not result_lines_list and isinstance(result_value, (list, tuple)):
-            result_lines_list = [_stringify_result_element(item) for item in result_value]
+            result_lines_list = [_stringify_result_element(item, output_delimiter) for item in result_value]
         elif split_lines:
             auto_lines = result_text.splitlines()
             if strip_empty:
@@ -270,12 +281,13 @@ class PythonCodeNode:
             if not result_lines_list:
                 result_lines_list = auto_lines
 
-        result_lines_list = [str(line) for line in result_lines_list]
+        result_lines_list = [_stringify_result_element(line, output_delimiter) for line in result_lines_list]
         if strip_empty:
             result_lines_list = [line for line in result_lines_list if line.strip()]
-        result_lines_text = "\n".join(result_lines_list)
+        result_lines_list_output = list(result_lines_list)
+        result_lines_text = "\n".join(result_lines_list_output)
 
-        return result_text, result_lines_text, stdout, stderr, ok
+        return result_text, result_lines_text, result_lines_list_output, stdout, stderr, ok
 
 
 def _resolve_script_destination(filename: str) -> Path:

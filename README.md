@@ -64,8 +64,9 @@ LIST output to allow wiring into other nodes.
 | `split_lines`| BOOLEAN | Optional (default `True`).                             |
 | `strip_empty`| BOOLEAN | Optional (default `True`).                             |
 | `delimiter`  | STRING  | Optional custom delimiter (default `", "`). Clear the field to rely solely on newline parsing. |
+| `output_delimiter` | STRING | Controls how nested lists are joined when auto-generating `result_lines`/`result_lines_list` (default `", "`). |
 
-Outputs `(result, result_lines, stdout, stderr, ok)` where:
+Outputs `(result, result_lines, result_lines_list, stdout, stderr, ok)` where:
 
 - `result` comes from the `result` (or `result_text`) variable inside the script.
 - `result_lines` is returned as a newline-delimited string, assembled from the
@@ -75,6 +76,9 @@ Outputs `(result, result_lines, stdout, stderr, ok)` where:
   nested lists become comma-delimited strings (e.g., `['a', 'b'] → "a, b"`).
   Treat `result_lines` inside Python as a list; the node converts it to text
   when emitting.
+- `result_lines_list` mirrors `result_lines` but stays a Python list so you can wire
+  the structured data elsewhere. Nested lists are formatted into strings using
+  `output_delimiter` before inclusion.
 - `stdout` captures anything printed by the script.
 - `stderr` contains the formatted traceback if an exception occurs.
 - `ok` is `True` when the script executes without raising.
@@ -96,6 +100,8 @@ Inside the Python script you always get:
 - `script_path`: absolute filesystem path of the file used when `load_from_file`
   is enabled, otherwise an empty string.
 - `delimiter`: the currently configured delimiter string (blank when unused).
+- `output_delimiter`: the delimiter used when rendering nested list entries for
+  `result_lines` and `result_lines_list`.
 - `result`/`result_lines`: start empty; assign to them when you want to emit
   values. Inside your script, treat `result_lines` as a list of strings. If you
   only populate `result`, the node will automatically either convert each item
