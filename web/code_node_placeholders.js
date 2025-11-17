@@ -282,10 +282,15 @@ function updateScriptFileState(node, forceReload = false) {
 
 	toggleWidgetVisibility(filenameWidget, true);
 	toggleWidgetVisibility(reloadWidget, shouldLoad);
-	toggleWidgetVisibility(saveWidget, true);
-	const loadShown = shouldLoad && reloadWidget && !reloadWidget.hidden;
-	markButtonSingle(reloadWidget, !loadShown);
-	markButtonSingle(saveWidget, !loadShown);
+	toggleWidgetVisibility(saveWidget, !shouldLoad);
+	const activeButton = shouldLoad ? reloadWidget : saveWidget;
+	const inactiveButton = shouldLoad ? saveWidget : reloadWidget;
+	if (activeButton) {
+		markButtonSingle(activeButton, true);
+	}
+	if (inactiveButton) {
+		markButtonSingle(inactiveButton, false);
+	}
 	setScriptReadOnly(scriptWidget, shouldLoad);
 
 	if (!shouldLoad || !scriptWidget) {

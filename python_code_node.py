@@ -43,34 +43,29 @@ class PythonCodeNode:
                 "placeholder": placeholder,
             }
 
-        optional_inputs = {
-            "input_slots": (
-                "INT",
-                {
-                    "default": cls.DEFAULT_INPUT_SLOTS,
-                    "min": 1,
-                    "max": cls.MAX_INPUT_SLOTS,
-                    "step": 1,
-                    "display": "number",
-                },
-            )
-        }
+        optional_inputs: Dict[str, Tuple[str, Dict[str, Any]]] = {}
         for slot in range(2, cls.MAX_INPUT_SLOTS + 1):
             optional_inputs[f"input{slot}"] = ("STRING", multiline_str(f"input{slot}"))
-        optional_inputs.update(
+        optional_inputs["load_from_file"] = ("BOOLEAN", {"default": False})
+        optional_inputs["script_filename"] = (
+            "STRING",
             {
-                "load_from_file": ("BOOLEAN", {"default": False}),
-                "script_filename": (
-                    "STRING",
-                    {
-                        "default": "",
-                        "multiline": False,
-                        "placeholder": "Relative to this extension (e.g., scripts/example.py)",
-                    },
-                ),
-                "split_lines": ("BOOLEAN", {"default": True}),
-                "strip_empty": ("BOOLEAN", {"default": True}),
-            }
+                "default": "",
+                "multiline": False,
+                "placeholder": "Relative to this extension (e.g., scripts/example.py)",
+            },
+        )
+        optional_inputs["split_lines"] = ("BOOLEAN", {"default": True})
+        optional_inputs["strip_empty"] = ("BOOLEAN", {"default": True})
+        optional_inputs["input_slots"] = (
+            "INT",
+            {
+                "default": cls.DEFAULT_INPUT_SLOTS,
+                "min": 1,
+                "max": cls.MAX_INPUT_SLOTS,
+                "step": 1,
+                "display": "number",
+            },
         )
 
         return {
