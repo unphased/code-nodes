@@ -155,7 +155,7 @@ function getActiveInputCount(node) {
 	return clampInputCount(widget.value);
 }
 
-function computeAutoInputCount(node) {
+function computeInputCounts(node) {
 	let lastWithContent = -1;
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
@@ -167,8 +167,12 @@ function computeAutoInputCount(node) {
 			lastWithContent = index;
 		}
 	});
-	const desired = lastWithContent + 2; // show next empty slot
-	return Math.max(1, Math.min(MAX_INPUTS, desired));
+	const used = Math.max(1, Math.min(MAX_INPUTS, lastWithContent + 1));
+	let visible = used;
+	if (visible < MAX_INPUTS) {
+		visible = Math.min(MAX_INPUTS, used + 1);
+	}
+	return { used, visible };
 }
 
 function describeInputPlaceholder(name, index, splitEnabled, activeCount) {
@@ -389,15 +393,14 @@ function toggleWidgetVisibility(widget, shouldShow) {
 
 function updateInputVisibility(node) {
 	const countWidget = getInputCountWidget(node);
-	const autoCount = computeAutoInputCount(node);
+	const { used, visible } = computeInputCounts(node);
 	if (countWidget) {
-		countWidget.value = autoCount;
+		countWidget.value = used;
 		toggleWidgetVisibility(countWidget, false);
 	}
-	const activeInputs = autoCount;
 	INPUT_NAMES.forEach((name, index) => {
 		const widget = findWidget(node, name);
-		toggleWidgetVisibility(widget, index < activeInputs);
+		toggleWidgetVisibility(widget, index < visible);
 	});
 
 	node.graph?.setDirtyCanvas(true, true);
